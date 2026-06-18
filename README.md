@@ -1,0 +1,38 @@
+# Agentic SDLC Demo
+
+A ready-to-run, **presenter-led demo environment** that showcases the full software development lifecycle driven by AI coding agents.
+
+Feed it a real-world **input** — a new requirement, meeting notes, or an action item — and the agent takes it through the entire lifecycle live:
+
+**intake → plan & design → implement → test → review → pull request → deploy & docs**
+
+Each stage is a self-contained "functionality" the presenter can demo on its own, or chain into one continuous end-to-end story. It is a **customer-facing showcase, not a hands-on lab** — the presenter drives, the audience watches the agentic workflow in action.
+
+## Status
+
+Scaffolded 2026-06-18 from `project-template`. Not started — the first working session researches the topic and proposes the demo plan (sample app, input→lifecycle story, per-stage flows, fallback). See `AGENT.md` § **First Session Instructions**.
+
+## Layout
+
+| Path | Description |
+|------|-------------|
+| `AGENT.md` | Main AI instructions — overview, demo concept, deliverables, how-to-verify, first-session plan |
+| `demos/` | Per-stage demo flows + the end-to-end script |
+| `docs/` | Talking points, setup, fallback plan, the narrative |
+| `inputs/` *(first session)* | Seed artifacts: sample requirement / meeting notes / action item |
+| `app/` *(first session)* | The sample application the agent evolves during the demo |
+
+## Getting started
+
+```pwsh
+# From the memory orchestrator, launch the project with your preferred agent:
+~/projects/memory/scripts/launch-copilot.ps1 ~\projects\agentic-sdlc-demo
+# or
+~/projects/memory/scripts/launch-claude.ps1 ~\projects\agentic-sdlc-demo
+```
+
+On first launch, ask the agent to research agentic-SDLC capabilities and propose the demo plan before building anything.
+
+## Reference
+
+Durable project knowledge lives on the memory wiki: `~/projects/memory/wiki/projects/agentic-sdlc-demo.md`.
