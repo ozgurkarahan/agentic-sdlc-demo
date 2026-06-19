@@ -12,7 +12,7 @@ A ready-to-run, **presenter-led demo environment** that showcases the full softw
 | Topic | Agentic Software Development Lifecycle |
 | Format | Demo (presenter-led, customer-facing) |
 | Audience | Customer technical leadership + technical stakeholders; reusable across audiences |
-| Status | Not started — first session researches the topic and proposes the plan |
+| Status | In progress — reusable white-label asset **"Agentic Engineering on GitHub"** authored under `docs/agentic-engineering-on-github/` (Story + Agents/Skills/Harness + GitHub pipeline + drop-in `harness/`); sample app + per-stage demo flows still to come |
 
 ## Demo Concept
 
@@ -38,7 +38,8 @@ Each stage is a "functionality in the repo" the presenter can jump to independen
 - [ ] **End-to-end demo script** — step-by-step narration with talking points
 - [ ] **Setup instructions** — clean-environment reproducible
 - [ ] **Fallback plan** — pre-baked branch / pre-recorded output if a live agent run stalls on stage
-- [ ] **Story & talking points** — the "why agentic SDLC" narrative for the audience
+- [x] **Story & talking points** — the "why agentic SDLC" narrative for the audience *(delivered as the reusable asset below)*
+- [x] **Reusable "Agentic Engineering on GitHub" asset** — client-agnostic narrative + reference harness under `docs/agentic-engineering-on-github/` (the Story; Agents + Skills + Harness; the GitHub-powered pipeline in fleet mode; drop-in example `harness/`)
 
 ## How to Verify
 
@@ -47,6 +48,7 @@ Each stage is a "functionality in the repo" the presenter can jump to independen
 | Demo dry-run | Walk the end-to-end script from a clean clone | Every stage runs from the written script — no improvisation needed |
 | Fallback | Trigger the fallback path once | Pre-baked branch / recording renders the same outcome |
 | Setup | Follow setup instructions on a clean environment | Environment reproduces from scratch with no hidden state |
+| Asset integrity | Lint `docs/agentic-engineering-on-github/harness/**/*.yml` + check the asset's internal links | All harness YAML parses; every cross-doc link resolves |
 
 **Definition of done:** the full input→lifecycle demo runs end-to-end from the written script on a clean environment, AND the fallback plan has been exercised at least once.
 
@@ -70,6 +72,7 @@ Each stage is a "functionality in the repo" the presenter can jump to independen
 | Path | Description |
 |------|-------------|
 | `demos/` | Per-stage demo flows + the end-to-end script |
+| `docs/agentic-engineering-on-github/` | Reusable white-label asset: the Story + Agents/Skills/Harness + GitHub pipeline + drop-in `harness/` examples |
 | `docs/` | Talking points, setup, fallback plan, the narrative |
 | `inputs/` *(add in first session)* | Seed artifacts: sample requirement / meeting notes / action item |
 | `app/` *(add in first session)* | The sample application the agent evolves during the demo |

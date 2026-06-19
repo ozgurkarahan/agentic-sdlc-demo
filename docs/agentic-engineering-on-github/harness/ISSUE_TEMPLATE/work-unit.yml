@@ -1,0 +1,63 @@
+name: Work Unit
+description: One parallel-safe (or ordered) unit of work for the agentic pipeline. EXAMPLE issue form.
+title: "[unit]: "
+labels: ["agentic-work-unit"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        **EXAMPLE issue form** — copy to a target repo's `.github/ISSUE_TEMPLATE/work-unit.yml`.
+        One Issue = one unit. A Development-fleet agent is assigned exactly one of these.
+  - type: textarea
+    id: intent
+    attributes:
+      label: Intent / summary
+      description: What this unit delivers, in one or two sentences.
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance criteria
+      description: Objective, testable criteria for "this works".
+    validations:
+      required: true
+  - type: textarea
+    id: dod
+    attributes:
+      label: Definition of Done
+      description: Explicit DoD — code, tests, evals, docs, etc.
+    validations:
+      required: true
+  - type: textarea
+    id: test-eval
+    attributes:
+      label: Test + eval strategy
+      description: Which tests prove correctness; which evals prove quality/trajectory.
+    validations:
+      required: true
+  - type: dropdown
+    id: parallel-safe
+    attributes:
+      label: Parallel-safe?
+      description: Can this run concurrently with other units, or must it wait?
+      options:
+        - "Yes — no dependencies on other units"
+        - "No — depends on other units (list below)"
+    validations:
+      required: true
+  - type: textarea
+    id: dependencies
+    attributes:
+      label: Dependencies
+      description: Issue numbers this unit depends on (leave blank if parallel-safe).
+    validations:
+      required: false
+  - type: input
+    id: model-tier
+    attributes:
+      label: Suggested model tier
+      description: premium (planning/architecture/impl) or cheaper (test/review/monitor).
+      placeholder: "premium | cheaper"
+    validations:
+      required: false
