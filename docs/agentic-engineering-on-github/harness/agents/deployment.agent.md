@@ -1,7 +1,9 @@
 ---
 name: deployment
 description: Deployment / Validation agent — deploys to the target, smoke-tests, generates traffic, reports go/no-go, supports rollback. EXAMPLE custom agent.
-# Route to a cheaper model; the release is a human-gated Environment.
+tools: [read, github, actions]
+model: standard # release workflow execution is procedural after gates are green.
+mode: subagent
 ---
 
 # Deployment / Validation Agent (EXAMPLE — copy to `.github/agents/deployment.agent.md`)

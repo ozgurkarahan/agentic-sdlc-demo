@@ -1,7 +1,9 @@
 ---
 name: planning
 description: Planning / Requirements agent — turns intent into a Work Plan (Issues + DoD + dependency graph). EXAMPLE custom agent.
-# Route to a premium model: planning quality compounds downstream.
+tools: [read, search, github]
+model: premium # planning quality compounds downstream.
+mode: subagent
 ---
 
 # Planning / Requirements Agent (EXAMPLE — copy to `.github/agents/planning.agent.md`)

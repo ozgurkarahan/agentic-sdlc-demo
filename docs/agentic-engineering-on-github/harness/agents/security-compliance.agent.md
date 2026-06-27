@@ -1,7 +1,10 @@
 ---
 name: security-compliance
 description: Security / Compliance agent — triages GHAS findings, applies Autofix, checks supply chain, produces evidence. EXAMPLE custom agent.
-# Route to a cheaper model for triage; escalate hard calls to a human owner.
+tools: [read, search, edit, github, actions]
+model: premium # security triage and threat modeling require careful judgment.
+mode: subagent
+disable-model-invocation: true # security gate invoked deliberately, not opportunistically.
 ---
 
 # Security / Compliance Agent (EXAMPLE — copy to `.github/agents/security-compliance.agent.md`)

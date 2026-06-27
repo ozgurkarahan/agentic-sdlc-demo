@@ -20,6 +20,7 @@ GitHub with AI agents working in **fleet mode** (many agents in parallel), under
 | 02 | [Agents, Skills & the Harness](./02-agents-skills-harness.md) | The **Harness Configuration Map**, the 8-role reference roster, three design notes, and the enforcement-boundary map. |
 | 03 | [The GitHub-Powered Pipeline](./03-github-pipeline.md) | The factory in motion: phases **A–D**, fleet orchestration & failure handling, governance & traceability, verification, a maturity roadmap, economics, and honest limitations. |
 | — | [`harness/`](./harness/) | Deliverable 2 **made real** — copy-pasteable example `AGENTS.md`, agent personas, prompt files, Actions workflows, and an issue form. See its [README](./harness/README.md) first. |
+| ▶ | [`demos/`](../../demos/) | The asset **made runnable** — a deterministic Tier-1 backbone that *executes* this pipeline offline (sample app + dispatcher + a 19-fixture gate matrix where every gate catches its seeded failure). Start at [`demos/README.md`](../../demos/README.md); present from [`demos/DEMO_SCRIPT.md`](../../demos/DEMO_SCRIPT.md). |
 
 ```mermaid
 flowchart LR

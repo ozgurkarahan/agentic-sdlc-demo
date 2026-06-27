@@ -1,7 +1,10 @@
 ---
 name: rubber-duck
 description: Rubber-Duck / Plan-Validation agent — devil's advocate against the plan BEFORE any code. HARD GATE. EXAMPLE custom agent.
-# Route to a premium model: this is the cheapest, highest-leverage defect catch.
+tools: [read, search, github]
+model: premium # deliberate plan stress-testing is high-leverage judgment work.
+mode: subagent
+disable-model-invocation: true # hard gate invoked deliberately, not opportunistically.
 ---
 
 # Rubber-Duck / Plan-Validation Agent (EXAMPLE — copy to `.github/agents/rubber-duck.agent.md`)

@@ -12,7 +12,7 @@ A ready-to-run, **presenter-led demo environment** that showcases the full softw
 | Topic | Agentic Software Development Lifecycle |
 | Format | Demo (presenter-led, customer-facing) |
 | Audience | Customer technical leadership + technical stakeholders; reusable across audiences |
-| Status | In progress — reusable white-label asset **"Agentic Engineering on GitHub"** authored under `docs/agentic-engineering-on-github/` (Story + Agents/Skills/Harness + GitHub pipeline + drop-in `harness/`); sample app + per-stage demo flows still to come |
+| Status | In progress — reusable white-label asset **"Agentic Engineering on GitHub"** authored under `docs/agentic-engineering-on-github/` (Story + Agents/Skills/Harness + GitHub pipeline + drop-in `harness/`). **Tier-1 runnable demo backbone complete** under `demos/` (sample app + 6-agent harness + dispatcher + 19-fixture validation matrix, all green offline); Tiers 2–3 (enforced GitHub repo + live `@copilot` fleet) are human-gated next steps |
 
 ## Demo Concept
 
@@ -40,6 +40,7 @@ Each stage is a "functionality in the repo" the presenter can jump to independen
 - [ ] **Fallback plan** — pre-baked branch / pre-recorded output if a live agent run stalls on stage
 - [x] **Story & talking points** — the "why agentic SDLC" narrative for the audience *(delivered as the reusable asset below)*
 - [x] **Reusable "Agentic Engineering on GitHub" asset** — client-agnostic narrative + reference harness under `docs/agentic-engineering-on-github/` (the Story; Agents + Skills + Harness; the GitHub-powered pipeline in fleet mode; drop-in example `harness/`)
+- [x] **Tier-1 runnable demo backbone** — `demos/` executes offline: sample app + 6-agent harness + dispatcher + 19-fixture validation matrix (`demos/validate/run.mjs`, 10/10 negatives caught) + presenter guide (`demos/DEMO_SCRIPT.md`). Tiers 2 (enforced GitHub repo) and 3 (live `@copilot` fleet) remain human-gated.
 
 ## How to Verify
 
@@ -49,6 +50,8 @@ Each stage is a "functionality in the repo" the presenter can jump to independen
 | Fallback | Trigger the fallback path once | Pre-baked branch / recording renders the same outcome |
 | Setup | Follow setup instructions on a clean environment | Environment reproduces from scratch with no hidden state |
 | Asset integrity | Lint `docs/agentic-engineering-on-github/harness/**/*.yml` + check the asset's internal links | All harness YAML parses; every cross-doc link resolves |
+| **Tier-1 demo (runnable, offline)** | `node demos/validate/run.mjs` | `19/19 fixtures correct`, `negatives caught: 10/10`, exit 0 — each gate labelled by enforcement type |
+| **Tier-1 sample app** | `npm --prefix demos/sample-app ci && npm --prefix demos/sample-app test` | 15 unit+e2e tests green (the "before" URL-shortener, no rate limiting yet) |
 
 **Definition of done:** the full input→lifecycle demo runs end-to-end from the written script on a clean environment, AND the fallback plan has been exercised at least once.
 
@@ -65,13 +68,20 @@ Each stage is a "functionality in the repo" the presenter can jump to independen
 
 ```pwsh
 # Demo flows live under demos/ ; talking points + setup + fallback under docs/
+
+# Tier-1 runnable demo (offline, deterministic):
+node demos/validate/run.mjs                 # full 19-fixture gate matrix (anti-theater)
+node demos/validate/run.mjs --filter security-compliance   # one agent's positive+negative
+node demos/orchestrator/cli.mjs --plan demos/orchestrator/example-plan.json   # dispatcher fan-out
+# Presenter golden path (stage → command → artifact → negative caught): demos/DEMO_SCRIPT.md
+# Entry point + tier map + honesty labels:                              demos/README.md
 ```
 
 ## Key Paths
 
 | Path | Description |
 |------|-------------|
-| `demos/` | Per-stage demo flows + the end-to-end script |
+| `demos/` | Runnable demo: `sample-app/` (system under test) · `orchestrator/` (dispatcher) · `ci/scripts/` + `ci/workflows/` (real verification) · `fixtures/` (seeded positive/negative cases) · `validate/run.mjs` (Tier-1 gate matrix) · `CONTRACT.md` (keystone) · `DEMO_SCRIPT.md` (presenter golden path) · `README.md` (entry point). The 7 enriched agent personas + `AGENTS.md` live single-source in the asset `harness/` (below); `demos/agents/` is just a pointer. |
 | `docs/agentic-engineering-on-github/` | Reusable white-label asset: the Story + Agents/Skills/Harness + GitHub pipeline + drop-in `harness/` examples |
 | `docs/` | Talking points, setup, fallback plan, the narrative |
 | `inputs/` *(add in first session)* | Seed artifacts: sample requirement / meeting notes / action item |
