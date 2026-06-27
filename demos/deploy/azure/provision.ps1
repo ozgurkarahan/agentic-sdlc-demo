@@ -9,17 +9,20 @@
     Resource group        rg-agentic-sdlc-demo            (Sweden Central)
     Log Analytics         log-agentic-sdlc                 (ACA requires a workspace)
     ACA environment       cae-agentic-sdlc
-    App (staging)         ca-urlshortener-staging          ingress :3000, max-replicas 1
-    App (production)      ca-urlshortener-prod             ingress :3000, max-replicas 1, multiple-revision
+    Container registry    acragenticsdlcdemo               (Basic, private; AcrPush=CI, AcrPull=app MIs)
+    App (staging)         ca-urlshortener-staging          ingress :3000, max-replicas 1, MI pull
+    App (production)      ca-urlshortener-prod             ingress :3000, max-replicas 1, multiple-revision, MI pull
     Entra app reg         agentic-sdlc-demo-gha            + OIDC federated creds (env-scoped)
-    Role                  Container Apps Contributor       scope = the RG only (least privilege)
-    Repo variables        AZURE_CLIENT_ID / TENANT_ID / SUBSCRIPTION_ID / RG / ACA_ENV / *_APP / LOCATION
+    Roles                 Container Apps Contributor (RG) + AcrPush (ACR) for CI; AcrPull (ACR) for app MIs
+    Repo variables        AZURE_CLIENT_ID / TENANT_ID / SUBSCRIPTION_ID / RG / ACR / ACA_ENV / *_APP / LOCATION
 
   Honesty notes (load-bearing):
     * OIDC subjects are ENVIRONMENT-scoped (repo:OWNER/REPO:environment:staging|production) — NOT a
       branch ref and NOT pull_request (a fork-token would otherwise be trusted on a public repo).
+    * Zero stored pull secret: each app pulls the private image via its system-assigned managed
+      identity (AcrPull); CI pushes via OIDC (AcrPush). No registry password / PAT anywhere.
     * The role is Container Apps Contributor on the RG only (no role-assignment rights, no broad
-      Contributor) — the workflow only needs to update apps / shift revision traffic.
+      Contributor); AcrPush/AcrPull are scoped to the ACR only.
     * Azure IDs are written as repo VARIABLES (non-secret, public-safe), never secrets.
 
   Re-runnable: every step checks existence first, so running twice is a no-op. Pair with teardown.ps1.
@@ -38,9 +41,11 @@ param(
   [string]$AppRegName     = 'agentic-sdlc-demo-gha',
   [string]$LogAnalytics   = 'log-agentic-sdlc',
   [string]$AcaEnv         = 'cae-agentic-sdlc',
+  [string]$Acr            = 'acragenticsdlcdemo',
   [string]$StagingApp     = 'ca-urlshortener-staging',
   [string]$ProdApp        = 'ca-urlshortener-prod',
   [string]$SeedImage      = 'mcr.microsoft.com/azuredocs/containerapps-helloworld:latest',
+  [int]   $SeedPort       = 80,
   [int]   $TargetPort     = 3000,
   [switch]$SkipRepoVariables
 )
@@ -57,11 +62,20 @@ az account set -s $Subscription
 $ctx = az account show --query "{name:name,id:id,tenant:tenantId}" -o json | ConvertFrom-Json
 Ok "Subscription: $($ctx.name) ($($ctx.id))"
 az extension add --name containerapp --upgrade --only-show-errors 2>$null | Out-Null
-foreach ($p in @('Microsoft.App','Microsoft.OperationalInsights')) {
+foreach ($p in @('Microsoft.App','Microsoft.OperationalInsights','Microsoft.ContainerRegistry')) {
   $state = az provider show -n $p --query registrationState -o tsv 2>$null
-  if ($state -ne 'Registered') { Info "Registering $p ..."; az provider register --namespace $p | Out-Null }
+  if ($state -ne 'Registered') {
+    Info "Registering $p ..."; az provider register --namespace $p | Out-Null
+    # R-e — actually WAIT for registration; a not-yet-Registered provider fails the first create.
+    for ($i = 0; $i -lt 30; $i++) {
+      Start-Sleep -Seconds 6
+      if ((az provider show -n $p --query registrationState -o tsv 2>$null) -eq 'Registered') { break }
+    }
+  }
+  $final = az provider show -n $p --query registrationState -o tsv 2>$null
+  if ($final -ne 'Registered') { Warn "$p still '$final' — create steps may fail until it finishes." } else { Ok "$p registered." }
 }
-Ok "Providers registered; containerapp extension present."
+Ok "Providers checked; containerapp extension present."
 
 # ---------------------------------------------------------------------------
 Step "1. Resource group ($ResourceGroup, $Location)"
@@ -92,10 +106,12 @@ if (-not $envExists) {
 function Ensure-App($name, [bool]$multipleRevision) {
   $exists = az containerapp show -g $ResourceGroup -n $name --query name -o tsv 2>$null
   if ($exists) { Ok "App $name already exists."; return }
-  Info "Creating $name (seed image; the pipeline replaces it on first deploy) ..."
+  Info "Creating $name (seed image on :$SeedPort; the pipeline retargets to :$TargetPort + swaps the image on first deploy) ..."
   # max-replicas 1: the URL-shortener store is in-memory / per-replica.
+  # R-f — create on the SEED image's real port ($SeedPort). deploy.yml runs `ingress update --target-port
+  # $TargetPort` before the first real deploy, so the seed never has to listen on a port it doesn't serve.
   az containerapp create -g $ResourceGroup -n $name --environment $AcaEnv `
-    --image $SeedImage --ingress external --target-port $TargetPort `
+    --image $SeedImage --ingress external --target-port $SeedPort `
     --min-replicas 0 --max-replicas 1 --only-show-errors | Out-Null
   if ($multipleRevision) {
     az containerapp revision set-mode -g $ResourceGroup -n $name --mode multiple --only-show-errors | Out-Null
@@ -109,7 +125,44 @@ $stagingFqdn = az containerapp show -g $ResourceGroup -n $StagingApp --query pro
 $prodFqdn    = az containerapp show -g $ResourceGroup -n $ProdApp    --query properties.configuration.ingress.fqdn -o tsv 2>$null
 
 # ---------------------------------------------------------------------------
-Step "5. Entra app registration + service principal ($AppRegName)"
+Step "5. ACR (private) + per-app managed-identity pull (zero stored pull secret)"
+# Private registry; images pushed by CI (AcrPush via OIDC) and pulled by each app's system-assigned
+# managed identity (AcrPull). No registry password, no PAT — the secretless data plane.
+$acrId = az acr show -n $Acr -g $ResourceGroup --query id -o tsv 2>$null
+if (-not $acrId) {
+  Info "Creating ACR $Acr (Basic) ..."
+  az acr create -g $ResourceGroup -n $Acr --sku Basic --admin-enabled false --only-show-errors | Out-Null
+  $acrId = az acr show -n $Acr -g $ResourceGroup --query id -o tsv
+  Ok "ACR created ($Acr.azurecr.io)."
+} else { Ok "ACR already exists ($Acr.azurecr.io)." }
+
+function Enable-AcrPull($appName) {
+  # 1) ensure the app has a system-assigned managed identity
+  $pid = az containerapp identity show -g $ResourceGroup -n $appName --query principalId -o tsv 2>$null
+  if (-not $pid) {
+    az containerapp identity assign -g $ResourceGroup -n $appName --system-assigned --only-show-errors | Out-Null
+    $pid = az containerapp identity show -g $ResourceGroup -n $appName --query principalId -o tsv
+  }
+  # 2) grant that identity AcrPull on the registry
+  $havePull = az role assignment list --assignee $pid --scope $acrId --query "[?roleDefinitionName=='AcrPull'] | [0].id" -o tsv 2>$null
+  if (-not $havePull) {
+    for ($i = 0; $i -lt 6; $i++) {
+      try { az role assignment create --assignee-object-id $pid --assignee-principal-type ServicePrincipal --role AcrPull --scope $acrId --only-show-errors | Out-Null; break }
+      catch { Start-Sleep -Seconds 5 }
+    }
+  }
+  # 3) point the app at the ACR using that managed identity (retry while AcrPull propagates)
+  for ($i = 0; $i -lt 6; $i++) {
+    try { az containerapp registry set -g $ResourceGroup -n $appName --server "$Acr.azurecr.io" --identity system --only-show-errors | Out-Null; break }
+    catch { Start-Sleep -Seconds 5 }
+  }
+  Ok "$appName → pulls from $Acr.azurecr.io via system managed identity (AcrPull)."
+}
+Enable-AcrPull $StagingApp
+Enable-AcrPull $ProdApp
+
+# ---------------------------------------------------------------------------
+Step "6. Entra app registration + service principal ($AppRegName)"
 $appId = az ad app list --display-name $AppRegName --query "[0].appId" -o tsv 2>$null
 if (-not $appId) {
   $appId = az ad app create --display-name $AppRegName --query appId -o tsv
@@ -120,7 +173,7 @@ if (-not $spId) { $spId = az ad sp create --id $appId --query id -o tsv; Ok "Ser
 else { Ok "Service principal already exists." }
 
 # ---------------------------------------------------------------------------
-Step "6. OIDC federated credentials (ENVIRONMENT-scoped — no branch, no pull_request)"
+Step "7. OIDC federated credentials (ENVIRONMENT-scoped — no branch, no pull_request)"
 $subjects = @{
   "$AppRegName-env-staging"    = "repo:$Repo:environment:staging"
   "$AppRegName-env-production" = "repo:$Repo:environment:production"
@@ -143,10 +196,11 @@ foreach ($name in $subjects.Keys) {
 }
 
 # ---------------------------------------------------------------------------
-Step "7. Role assignment (Container Apps Contributor, scope = RG only)"
+Step "8. Role assignments (least privilege)"
+# (a) Container Apps Contributor on the RG — update apps / shift revision traffic. No role-assignment rights.
 $role = 'Container Apps Contributor'
 $have = az role assignment list --assignee $appId --scope $rgId --query "[?roleDefinitionName=='$role'] | [0].id" -o tsv 2>$null
-if ($have) { Ok "Role already assigned." }
+if ($have) { Ok "Role '$role' already assigned." }
 else {
   # The SP can take a few seconds to replicate before it is assignable.
   for ($i = 0; $i -lt 6; $i++) {
@@ -155,15 +209,26 @@ else {
   }
   Ok "Role '$role' assigned on the RG."
 }
+# (b) AcrPush on the ACR — the CI identity pushes images via OIDC (`az acr login`), no stored secret.
+$havePush = az role assignment list --assignee $appId --scope $acrId --query "[?roleDefinitionName=='AcrPush'] | [0].id" -o tsv 2>$null
+if ($havePush) { Ok "Role 'AcrPush' already assigned." }
+else {
+  for ($i = 0; $i -lt 6; $i++) {
+    try { az role assignment create --assignee $appId --role AcrPush --scope $acrId --only-show-errors | Out-Null; break }
+    catch { Start-Sleep -Seconds 5 }
+  }
+  Ok "Role 'AcrPush' assigned on the ACR (CI push identity)."
+}
 
 # ---------------------------------------------------------------------------
-Step "8. Repo variables (non-secret) on $Repo"
+Step "9. Repo variables (non-secret) on $Repo"
 $vars = [ordered]@{
   AZURE_CLIENT_ID       = $appId
   AZURE_TENANT_ID       = $ctx.tenant
   AZURE_SUBSCRIPTION_ID = $ctx.id
   AZURE_RG              = $ResourceGroup
   AZURE_LOCATION        = $Location
+  AZURE_ACR             = $Acr
   ACA_ENV               = $AcaEnv
   STAGING_APP           = $StagingApp
   PROD_APP              = $ProdApp
@@ -190,8 +255,9 @@ Write-Host "  AZURE_CLIENT_ID        $appId"
 Write-Host "  AZURE_TENANT_ID        $($ctx.tenant)"
 Write-Host "  AZURE_SUBSCRIPTION_ID  $($ctx.id)"
 Write-Host "  Resource group         $ResourceGroup ($Location)"
+Write-Host "  Container registry     $Acr.azurecr.io   (private; AcrPush=CI via OIDC, AcrPull=app MIs)"
 Write-Host "  Staging app            $StagingApp   https://$stagingFqdn"
 Write-Host "  Production app         $ProdApp      https://$prodFqdn"
 Write-Host ""
 Ok "Foundation ready. Next: create GitHub Environments (staging auto, production = required reviewer) and push deploy.yml."
-Warn "Apps currently serve the SEED image; they go live on the URL-shortener at the FIRST pipeline deploy."
+Warn "Apps currently serve the SEED image on :$SeedPort; deploy.yml retargets to :$TargetPort + swaps in the URL-shortener (pulled from ACR via managed identity) on the FIRST pipeline deploy."
