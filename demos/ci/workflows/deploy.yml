@@ -1,0 +1,166 @@
+# Deploy — the DevOps / Deployment agent, made REAL (Tier-2, Azure Container Apps).
+#
+# Lives in the demo source at demos/ci/workflows/. At Tier-2 instantiation this file is copied to
+# the live repo's .github/workflows/deploy.yml, where the sample app is the repo ROOT (Dockerfile at
+# root, scripts at ci/scripts/). It turns the Deployment gate from 🟦 local-smoke into a real
+# deployment with split, HONEST enforcement:
+#   🟩 native    — the `production` GitHub Environment reviewer pause + the Deployment record/history.
+#   🟦 layered   — the live smoke probe + revision traffic rollback (our orchestration, not a platform block).
+#   ⛔ external   — Azure itself (Container Apps) is an external dependency, never a native GitHub gate.
+#
+# Secrets: NONE. Azure auth is OIDC; the IDs are repo VARIABLES. The GHCR push uses GITHUB_TOKEN.
+# Fork PRs build only (job 1) and NEVER log into Azure (jobs 2–3 are skipped on pull_request).
+name: Deploy
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]          # build proof only — no Azure login, no deploy
+  workflow_dispatch:
+    inputs:
+      inject_fault:
+        description: 'Deploy a faulted revision (FAULT_HEALTHZ=1) to prove the rollback fires'
+        type: boolean
+        default: false
+
+concurrency:
+  group: deploy-${{ github.ref }}
+  cancel-in-progress: false       # never cancel a half-finished production traffic shift
+
+permissions:
+  contents: read
+
+jobs:
+  # ── 1. Build + push the image to GHCR. Runs on PRs too (build proof) but touches no Azure. ──
+  build-push:
+    name: Build & push image (GHCR)
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    outputs:
+      image: ${{ steps.meta.outputs.image }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Compute lowercase image ref
+        id: meta
+        run: |
+          REPO_LC="$(echo '${{ github.repository }}' | tr '[:upper:]' '[:lower:]')"
+          echo "image=ghcr.io/${REPO_LC}/urlshortener" >> "$GITHUB_OUTPUT"
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          tags: |
+            ${{ steps.meta.outputs.image }}:${{ github.sha }}
+            ${{ steps.meta.outputs.image }}:latest
+
+  # ── 2. Deploy to STAGING + live smoke. Fail here ⇒ stop; production is never touched. ──
+  deploy-staging:
+    name: Deploy staging + live smoke
+    needs: build-push
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    environment: staging          # makes the OIDC subject repo:…:environment:staging
+    permissions:
+      id-token: write             # OIDC
+      contents: read
+      deployments: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 20 }
+      - uses: azure/login@v2
+        with:
+          client-id: ${{ vars.AZURE_CLIENT_ID }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+      - name: Deploy image to staging
+        env:
+          FAULT: ${{ (github.event_name == 'workflow_dispatch' && inputs.inject_fault) && '1' || '0' }}
+        run: |
+          az containerapp update -g "${{ vars.AZURE_RG }}" -n "${{ vars.STAGING_APP }}" \
+            --image "${{ needs.build-push.outputs.image }}:${{ github.sha }}" \
+            --set-env-vars "FAULT_HEALTHZ=$FAULT" -o none
+          FQDN="$(az containerapp show -g "${{ vars.AZURE_RG }}" -n "${{ vars.STAGING_APP }}" \
+            --query properties.configuration.ingress.fqdn -o tsv)"
+          echo "STAGING_URL=https://$FQDN/healthz" >> "$GITHUB_ENV"
+      - name: Live smoke (staging)        # 🟦 layered — retries cover ACA scale-to-zero cold start
+        run: node ci/scripts/smoke-check.mjs --url "$STAGING_URL" --retries 15 --delay 4000
+
+  # ── 3. Deploy to PRODUCTION. Environment reviewer pause (🟩) → 0%-traffic canary → shift → rollback on fail. ──
+  deploy-production:
+    name: Deploy production (reviewed) + rollback
+    needs: deploy-staging
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    environment: production       # REQUIRED REVIEWER pause + Deployment record (🟩 native)
+    permissions:
+      id-token: write
+      contents: read
+      deployments: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 20 }
+      - uses: azure/login@v2
+        with:
+          client-id: ${{ vars.AZURE_CLIENT_ID }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Capture last-good revision (for rollback)
+        id: lastgood
+        run: |
+          OLD="$(az containerapp ingress traffic show -g "${{ vars.AZURE_RG }}" -n "${{ vars.PROD_APP }}" \
+            --query "[?weight>\`0\`].revisionName | [0]" -o tsv)"
+          echo "old_rev=$OLD" >> "$GITHUB_OUTPUT"
+          echo "Last-good production revision: ${OLD:-<none>}"
+
+      - name: Deploy new revision at 0% traffic
+        id: deploy
+        run: |
+          SUFFIX="sha-$(echo '${{ github.sha }}' | cut -c1-8)"
+          echo "suffix=$SUFFIX" >> "$GITHUB_OUTPUT"
+          az containerapp update -g "${{ vars.AZURE_RG }}" -n "${{ vars.PROD_APP }}" \
+            --image "${{ needs.build-push.outputs.image }}:${{ github.sha }}" \
+            --revision-suffix "$SUFFIX" --set-env-vars "FAULT_HEALTHZ=0" -o none
+          NEW="${{ vars.PROD_APP }}--$SUFFIX"
+          # keep all existing traffic on the last-good revision; the new one starts at 0%
+          if [ -n "${{ steps.lastgood.outputs.old_rev }}" ]; then
+            az containerapp ingress traffic set -g "${{ vars.AZURE_RG }}" -n "${{ vars.PROD_APP }}" \
+              --revision-weight "${{ steps.lastgood.outputs.old_rev }}=100" "$NEW=0" -o none
+          fi
+          RFQDN="$(az containerapp revision show -g "${{ vars.AZURE_RG }}" -n "${{ vars.PROD_APP }}" \
+            --revision "$NEW" --query properties.fqdn -o tsv)"
+          echo "new_rev=$NEW" >> "$GITHUB_OUTPUT"
+          echo "CANARY_URL=https://$RFQDN/healthz" >> "$GITHUB_ENV"
+
+      - name: Smoke the canary revision (0% traffic)
+        run: node ci/scripts/smoke-check.mjs --url "$CANARY_URL" --retries 15 --delay 4000
+
+      - name: Shift 100% traffic to the new revision
+        run: |
+          az containerapp ingress traffic set -g "${{ vars.AZURE_RG }}" -n "${{ vars.PROD_APP }}" \
+            --revision-weight "${{ steps.deploy.outputs.new_rev }}=100" -o none
+          FQDN="$(az containerapp show -g "${{ vars.AZURE_RG }}" -n "${{ vars.PROD_APP }}" \
+            --query properties.configuration.ingress.fqdn -o tsv)"
+          echo "PROD_URL=https://$FQDN/healthz" >> "$GITHUB_ENV"
+
+      - name: Post-shift smoke (production)
+        run: node ci/scripts/smoke-check.mjs --url "$PROD_URL" --retries 10 --delay 4000
+
+      # Fires only if any step above failed — restore traffic to the last-good revision, then fail the job
+      # so the GitHub Deployment is recorded as FAILED (no-go). This is the real, live rollback.
+      - name: Rollback to last-good revision
+        if: failure() && steps.lastgood.outputs.old_rev != ''
+        run: |
+          echo "::warning::Smoke/deploy failed — rolling back to ${{ steps.lastgood.outputs.old_rev }}"
+          az containerapp ingress traffic set -g "${{ vars.AZURE_RG }}" -n "${{ vars.PROD_APP }}" \
+            --revision-weight "${{ steps.lastgood.outputs.old_rev }}=100" -o none
