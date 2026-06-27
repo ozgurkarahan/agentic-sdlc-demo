@@ -4,10 +4,10 @@
 
 .DESCRIPTION
   Reverses provision.ps1:
-    * Deletes the resource group (all Azure resources + the RG-scoped role assignment).
+    * Deletes the resource group (all Azure resources — incl. the private ACR + its images — and the
+      RG-/ACR-scoped role assignments).
     * Deletes the Entra app registration (removes its service principal + every federated credential).
     * Deletes the repo variables and the staging/production GitHub Environments.
-    * Optionally deletes the GHCR container package (-DeletePackage).
     * Runs a post-teardown VERIFICATION query and prints PASS/leftover for each surface.
 
   Re-runnable: every delete tolerates "already gone".
@@ -22,8 +22,6 @@ param(
   [string]$ResourceGroup = 'rg-agentic-sdlc-demo',
   [string]$Repo          = 'ozgurkarahan/agentic-sdlc-demo-live',
   [string]$AppRegName    = 'agentic-sdlc-demo-gha',
-  [string]$Package       = 'agentic-sdlc-demo-live/urlshortener',
-  [switch]$DeletePackage,
   [switch]$KeepRepoSide,
   [switch]$NoWait
 )
@@ -55,7 +53,7 @@ else { Ok "App registration already gone." }
 
 if (-not $KeepRepoSide) {
   Step "3. Repo variables on $Repo"
-  foreach ($v in @('AZURE_CLIENT_ID','AZURE_TENANT_ID','AZURE_SUBSCRIPTION_ID','AZURE_RG','AZURE_LOCATION','ACA_ENV','STAGING_APP','PROD_APP')) {
+  foreach ($v in @('AZURE_CLIENT_ID','AZURE_TENANT_ID','AZURE_SUBSCRIPTION_ID','AZURE_RG','AZURE_LOCATION','AZURE_ACR','ACA_ENV','STAGING_APP','PROD_APP')) {
     Gh-Fallback @('variable','delete',$v,'--repo',$Repo)
   }
   Ok "Repo variables removed (if any)."
@@ -65,13 +63,6 @@ if (-not $KeepRepoSide) {
     Gh-Fallback @('api','-X','DELETE',"repos/$Repo/environments/$e")
   }
   Ok "Environments removed (if any)."
-
-  if ($DeletePackage) {
-    Step "5. GHCR package ($Package)"
-    $enc = $Package -replace '/','%2F'
-    Gh-Fallback @('api','-X','DELETE',"user/packages/container/$enc")
-    Ok "Package delete attempted."
-  }
 }
 
 # ---------------------------------------------------------------------------
@@ -83,7 +74,7 @@ $app = az ad app list --display-name $AppRegName --query "length(@)" -o tsv 2>$n
 if ([int]$app -gt 0) { Warn "App registration still present."; $leftover++ } else { Ok "App registration: gone." }
 if (-not $KeepRepoSide) {
   $vars = Gh-Fallback @('variable','list','--repo',$Repo)
-  if ($vars -and ($vars -match 'AZURE_')) { Warn "Some AZURE_* repo variables still present."; $leftover++ } else { Ok "Repo variables: clean." }
+  if ($vars -and ($vars -match 'AZURE_|ACA_ENV|STAGING_APP|PROD_APP')) { Warn "Some repo variables (AZURE_*/ACA_ENV/*_APP) still present."; $leftover++ } else { Ok "Repo variables: clean." }
 }
 Write-Host ""
 if ($leftover -eq 0) { Ok "TEARDOWN VERIFIED — zero residual spend, zero residual trust." }
