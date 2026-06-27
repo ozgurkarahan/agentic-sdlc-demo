@@ -266,6 +266,14 @@ function printMatrix(results) {
   console.log('    ℹ️ [info] 🟩 native     Environment approval — required before release (human)');
   console.log('');
 
+  // The Deployment gate's TRUE enforcement is a split label, only fully present at T2 (Azure).
+  // T1 above proves the 🟦 rollback LOGIC with a local fixture; the live deploy adds the rest.
+  console.log('  tier-2 live deployment (Azure Container Apps — verified by deploy.yml, not in T1)');
+  console.log('    ℹ️ [info] 🟩 native     production Environment reviewer + GitHub Deployment record');
+  console.log('    ℹ️ [info] 🟦 layered    live /healthz smoke (retries) + revision-traffic rollback');
+  console.log('    ℹ️ [info] ⛔ external    Azure Container Apps — external dependency, never a native GitHub block');
+  console.log('');
+
   const passed = results.filter((r) => r.ok).length;
   const failed = results.length - passed;
   const negatives = results.filter((r) => r.fx.polarity === 'negative');

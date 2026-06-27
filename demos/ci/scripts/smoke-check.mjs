@@ -13,11 +13,13 @@
 //
 // Usage:
 //   node smoke-check.mjs --app <dist/app.js> [--variant <break-healthz.mjs>] [--route /healthz] [--expect 200] [--json]
+//   node smoke-check.mjs --url <https://host/healthz> [--expect 200] [--retries 10] [--delay 3000] [--json]   # live ingress (T2)
 
 import { pathToFileURL } from 'node:url';
 import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import http from 'node:http';
+import https from 'node:https';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 
@@ -36,8 +38,87 @@ function request(port, route) {
   });
 }
 
+// Remote liveness probe against a LIVE ingress URL (T2 — Azure Container Apps).
+// Used by deploy.yml after `az containerapp update` to decide go / no-go on the real
+// deployment. Retries with a fixed backoff because ACA can scale to zero (cold start).
+function probeUrl(urlString, timeoutMs = 10000) {
+  return new Promise((res, rej) => {
+    let u;
+    try {
+      u = new URL(urlString);
+    } catch {
+      rej(new Error(`invalid --url: ${urlString}`));
+      return;
+    }
+    const lib = u.protocol === 'https:' ? https : http;
+    const req = lib.request(
+      {
+        method: 'GET',
+        hostname: u.hostname,
+        port: u.port || (u.protocol === 'https:' ? 443 : 80),
+        path: (u.pathname || '/') + (u.search || ''),
+        agent: false,
+        timeout: timeoutMs,
+      },
+      (response) => {
+        response.resume();
+        response.on('end', () => res({ status: response.statusCode }));
+        response.on('error', rej);
+      },
+    );
+    req.on('timeout', () => req.destroy(new Error('probe timeout')));
+    req.on('error', rej);
+    req.end();
+  });
+}
+
+async function remoteSmoke(args) {
+  const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+  let observed = { status: 0 };
+  let lastError = null;
+  let attempts = 0;
+
+  for (let i = 1; i <= args.retries; i += 1) {
+    attempts = i;
+    try {
+      observed = await probeUrl(args.url);
+      lastError = null;
+      if (observed.status === args.expect) break;
+    } catch (err) {
+      lastError = err;
+      observed = { status: 0 };
+    }
+    if (i < args.retries) await sleep(args.delayMs);
+  }
+
+  const smokePass = observed.status === args.expect;
+  const report = {
+    check: 'smoke',
+    mode: 'remote',
+    enforcement: 'CI live-smoke + revision rollback (🟦) / Environment reviewer + deployment record (🟩) / Azure external dep (⛔)',
+    url: args.url,
+    expect: args.expect,
+    observedStatus: observed.status,
+    attempts,
+    decision: smokePass ? 'go' : 'no-go',
+    rollback: !smokePass,
+    signals: smokePass ? [] : ['rollback', 'no-go'],
+    pass: smokePass,
+    lastError: lastError ? lastError.message : null,
+  };
+
+  if (args.json) {
+    process.stdout.write(JSON.stringify(report, null, 2) + '\n');
+  } else {
+    console.log(
+      `smoke-check[remote]: ${smokePass ? 'GO ✅' : 'NO-GO ❌ (rollback)'}  ${args.url} → ${observed.status} (expected ${args.expect}) after ${attempts} attempt(s)${lastError ? ` — last error: ${lastError.message}` : ''}`,
+    );
+  }
+  process.exitCode = smokePass ? 0 : 1;
+}
+
 function parseArgs(argv) {
-  const args = { route: '/healthz', expect: 200, json: false, variant: null };
+  const args = { route: '/healthz', expect: 200, json: false, variant: null, url: null, retries: 10, delayMs: 3000 };
   for (let i = 2; i < argv.length; i += 1) {
     const a = argv[i];
     if (a === '--json') args.json = true;
@@ -45,6 +126,9 @@ function parseArgs(argv) {
     else if (a === '--variant') args.variant = argv[++i];
     else if (a === '--route') args.route = argv[++i];
     else if (a === '--expect') args.expect = Number(argv[++i]);
+    else if (a === '--url') args.url = argv[++i];
+    else if (a === '--retries') args.retries = Number(argv[++i]);
+    else if (a === '--delay') args.delayMs = Number(argv[++i]);
     else if (a === '--input') args.input = argv[++i];
   }
   if (!args.app) args.app = resolve(HERE, '..', '..', 'sample-app', 'dist', 'app.js');
@@ -58,6 +142,12 @@ async function importDefault(path) {
 
 async function main() {
   const args = parseArgs(process.argv);
+
+  // Remote mode — probe a LIVE ingress URL (T2). Skips the in-process app boot entirely.
+  if (args.url) {
+    await remoteSmoke(args);
+    return;
+  }
 
   // A fixture may carry its variant/route in an `input` block (validator convention).
   if (args.input) {
