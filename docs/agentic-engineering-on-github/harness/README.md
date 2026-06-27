@@ -25,6 +25,8 @@ the enforcement-boundary map in `../02-agents-skills-harness.md` Part 4.)
 | Path | Maps to | Harness component |
 |---|---|---|
 | `AGENTS.md` | repo root `AGENTS.md` | Instructions / static context (drives the Development fleet) |
+| `instructions/agent-safety.instructions.md` | `.github/instructions/` | Safety overlay for all agents |
+| `agents/orchestrator.agent.md` | `.github/agents/` | Orchestrator / Dispatcher role |
 | `agents/planning.agent.md` | `.github/agents/` | Planning / Requirements role |
 | `agents/rubber-duck.agent.md` | `.github/agents/` | Plan-Validation (hard gate) role |
 | `agents/quality-test.agent.md` | `.github/agents/` | Quality / Test role |
@@ -40,7 +42,7 @@ the enforcement-boundary map in `../02-agents-skills-harness.md` Part 4.)
 ## How to instantiate (in a target repo)
 
 1. Copy `AGENTS.md` to the **repo root**; fill the bracketed `[...]` parts for your service.
-2. Copy `agents/`, `prompts/`, `ISSUE_TEMPLATE/`, and `workflows/` under the repo's **`.github/`**.
+2. Copy `agents/`, `instructions/`, `prompts/`, `ISSUE_TEMPLATE/`, and `workflows/` under the repo's **`.github/`**.
 3. Replace the placeholder `echo` steps with your real test / eval / supply-chain commands.
 4. Set the **CodeQL language(s)** in `security-gate.yml`.
 5. **Turn on enforcement** (the caveat above): rulesets, required checks, required reviews,

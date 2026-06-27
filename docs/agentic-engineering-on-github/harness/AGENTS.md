@@ -59,6 +59,7 @@ a small REST API service. Replace with the target repo's real service.]`
 
 | Role | Where it's defined |
 |---|---|
+| Orchestrator / Dispatcher | `.github/agents/orchestrator.agent.md` |
 | Planning / Requirements | `.github/agents/planning.agent.md` |
 | Rubber-Duck / Plan-Validation | `.github/agents/rubber-duck.agent.md` |
 | Quality / Test | `.github/agents/quality-test.agent.md` |
@@ -69,6 +70,7 @@ a small REST API service. Replace with the target repo's real service.]`
 | Work intake | `.github/ISSUE_TEMPLATE/work-unit.yml` |
 | Verification | `.github/workflows/tests-and-evals.yml` |
 | Security gate | `.github/workflows/security-gate.yml` |
+| Safety overlay | `.github/instructions/agent-safety.instructions.md` |
 
 > 🔒 **IF HIGH-ASSURANCE.** Add: mandatory multi-party plan + release approval; a dedicated
 > Security/Compliance owner; "all security + eval checks green before merge"; stricter rulesets and

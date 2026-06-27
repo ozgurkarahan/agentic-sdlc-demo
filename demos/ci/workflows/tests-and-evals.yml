@@ -1,0 +1,105 @@
+# Tests & Evals — REAL verification (replaces the EXAMPLE echo placeholders).
+#
+# Lives in the demo source at demos/ci/workflows/. At Tier-2 instantiation (D7) this file
+# is copied to the dedicated repo's .github/workflows/tests-and-evals.yml, where the sample
+# app is the repo ROOT and the scripts live at ci/scripts/. Make the `tests`, `evals`, and
+# `path-scope` jobs REQUIRED status checks in the target repo's ruleset to actually gate merges.
+#
+# Verification = Tests (deterministic) + Evals (a LAYERED PATTERN run as Actions jobs — NOT a
+# native GitHub product) + a custom path-scope gate. The deterministic tests + eval-rubric are
+# the REQUIRED gate; the LM-judge is OPTIONAL and skips safely on fork PRs (no secret in scope).
+name: Tests & Evals
+
+on:
+  pull_request:
+    branches: [ master ]
+
+concurrency:
+  group: tests-evals-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  tests:
+    name: Tests (${{ matrix.suite }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        suite: [unit, e2e]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+      - name: Run ${{ matrix.suite }} tests
+        run: npm run test:${{ matrix.suite }}
+
+  evals:
+    name: Evals (trajectory + rubric)   # LAYERED PATTERN — not a native GitHub product
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+
+      # Trajectory eval — did the agent touch its declared files and add the required test?
+      # The dev agent declares its unit scope in .agent/unit.json on the branch.
+      - name: Trajectory eval
+        run: |
+          if [ -f .agent/unit.json ]; then
+            CHANGED="$(git diff --name-only origin/${{ github.base_ref }}...HEAD | paste -sd, -)"
+            DECLARED="$(jq -r '.declaredPaths | join(",")' .agent/unit.json)"
+            REQTEST="$(jq -r '.requiredTest // empty' .agent/unit.json)"
+            node ci/scripts/trajectory-check.mjs --declared "$DECLARED" --changed "$CHANGED" ${REQTEST:+--required-test "$REQTEST"}
+          else
+            echo "no .agent/unit.json — skipping trajectory eval for this PR"
+          fi
+
+      # Output rubric — deterministic 429 + Retry-After acceptance eval for the rate-limit story.
+      # Applies only to the unit that claims the rate-limit capability (limiter present in tree).
+      - name: Output rubric (rate-limit acceptance)
+        run: |
+          if [ -f src/middleware/rateLimit.ts ] || grep -rqs "rateLimit" src/app.ts; then
+            node ci/scripts/eval-rubric.mjs --app dist/app.js
+          else
+            echo "rate-limit acceptance eval: not applicable to this unit (limiter not in scope) — skipped"
+          fi
+
+      # LM-judge — OPTIONAL / non-required. Skips safely without a model token (e.g. fork PRs).
+      - name: LM-judge (optional, advisory)
+        continue-on-error: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: node ci/scripts/lm-judge.mjs
+
+  path-scope:
+    name: Path-scope (fleet lane check)   # custom 🟦 required job — NOT a GitHub primitive
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Changed files must stay within the unit's declared paths
+        run: |
+          if [ -f .agent/unit.json ]; then
+            CHANGED="$(git diff --name-only origin/${{ github.base_ref }}...HEAD | paste -sd, -)"
+            DECLARED="$(jq -r '.declaredPaths | join(",")' .agent/unit.json)"
+            node ci/scripts/path-scope-check.mjs --declared "$DECLARED" --changed "$CHANGED"
+          else
+            echo "no .agent/unit.json — skipping path-scope check for this PR"
+          fi
