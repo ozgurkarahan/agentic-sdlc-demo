@@ -25,3 +25,7 @@ deploy, auth) · budget · deadline · `HARNESS_KILL` · **dry-run default, live
 
 ## L5 backlog
 S6 API-key auth scenario (offline-first); bot-PR `runs/{id}/approve` approval; first ATTENDED auto-approved prod-deploy capstone.
+
+## L5 update (2026-06-29) — DONE
+- ✅ S6 auth(401) added; eval proven status-general (74/74, 45 neg, zero gate edits) — no defect.
+- ✅ Delegated-approver LIVE: decision core approved in-scope; POST approve → **403 "not a fork PR"** → KNOWN-DEFECT (no retry loop). Same-repo bot runs aren't fork-approvable + had no pending deployments → bot-run clearing is repo-config-specific (real, not a harness bug). Owner-PR green/red path already proven (Loop-3 L26). First attended prod-deploy capstone still open.
