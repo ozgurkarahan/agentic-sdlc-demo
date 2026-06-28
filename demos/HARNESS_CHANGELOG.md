@@ -381,3 +381,18 @@ green throughout: **40 → 47 → 49 fixtures, 28 negatives caught, exit 0** (no
 - **Do-not-redo:** run-status classification lives ONLY in `ci/lib/run-status.mjs` (pure) — never re-add
   conclusion literals to the validator/runner. A new scenario reuses the `workflow-conclusion` gate as-is
   (fixtures carry their own canned `runs`+`identity`).
+
+---
+
+## 🔁 LOOP 4 — Run-status generalization + test-mode DELEGATED approval (2026-06-29)
+
+**Goal:** clean repo; build a heavily-gated TEST-MODE delegated-approval helper (honest, not "human review"); prove the
+Loop-3 run-status gate is scenario-general. Rubber-duck GO-WITH-FIXES → S6 + full unattended prod capstone deferred to L5.
+
+### Built
+- **Repo hygiene:** closed Loop-3 proof #29/#30/#31/#32, deleted proof branches, cancelled stuck run 28336842138; kept #21,#22-#26,#27,#28,#33.
+- **Delegated approver:** `ci/lib/approval.mjs` (PURE) + `ci/scripts/auto-approve.mjs` (adapter, +live discovery dry-run). 12 fixtures (2 pos + 10 refusals: wrong-repo/no-ledger/sha-mismatch/missing-label/branch/sensitive-files/cant-approve/over-budget/deadline/kill-switch). DRY-RUN default; live only AUTO_APPROVE_TEST_MODE=1. Honest 🟨 "delegated, no human reviewed".
+- **Run-status scenario-general:** S2-S5 each got success-GO + failure-NO-GO fixtures with ZERO gate edits. Matrix 49→69 (42 negatives).
+
+### Defects found: NONE (gates were already content-general). Live discovery revealed action_required = bot-PR "approve and run" (not env deployments) → handled by runs/{id}/approve, deferred to L5.
+### L5 backlog: S6 auth scenario; first ATTENDED auto-approved prod-deploy capstone; runs/{id}/approve bot-run approval.

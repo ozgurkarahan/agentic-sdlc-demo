@@ -204,8 +204,7 @@ const drivers = {
     return { outcome: j.pass ? 'pass' : 'blocked', signals: j.signals ?? [] };
   },
 
-  // Loop-3 (M4): the LM-judge is ADVISORY default-on. The script ALWAYS exits 0 (never blocks);
-  // it "fires" (records a finding) when the judge verdict is fail. We map a recorded finding to
+  // Loop-3 (M4): the LM-judge is ADVISORY default-on. The script ALWAYS exits 0 (never blocks);  // it "fires" (records a finding) when the judge verdict is fail. We map a recorded finding to
   // 'blocked' here ONLY to prove the advisory gate fires deterministically — exactly like the
   // doc-coupling advisory gate. The real merge is never blocked by it.
   'lm-judge'(fx) {
@@ -213,6 +212,16 @@ const drivers = {
     const j = parseJson(r.stdout);
     if (!j) return { outcome: 'error', signals: [] };
     return { outcome: j.flagged ? 'blocked' : 'pass', signals: j.signals ?? [] };
+  },
+
+  // Loop-4: test-mode delegated-approval. A fixture's input is a full decision context; pass = the
+  // approver would approve (or dry-run would-approve); blocked = it REFUSED (a negative fixture must
+  // be refused for the right reason). Proves the auto-approver's safety preconditions OFFLINE.
+  'auto-approve'(fx) {
+    const r = runScript('auto-approve.mjs', ['--input', fx.path, '--json']);
+    const j = parseJson(r.stdout);
+    if (!j) return { outcome: 'error', signals: [] };
+    return { outcome: j.decision === 'refuse' ? 'blocked' : 'pass', signals: j.signals ?? [] };
   },
 
   async dispatch(fx) {

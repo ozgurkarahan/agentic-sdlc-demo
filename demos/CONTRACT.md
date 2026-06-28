@@ -207,3 +207,18 @@ Loop-2 success criterion ("no S1 hardcoding remains").
 opposite. The smarter and more autonomous the agents, the more you need a deterministic, model-agnostic
 check that the pipeline they drove actually went green. We annotate every gate this way so we know what
 to keep and what to retire." *(Full crutch/durable pass over all gates = L4 backlog B4.)*
+
+---
+
+## 12. Test-mode DELEGATED approval (Loop 4 — honest automation, 2026-06-29)
+
+> The harness can run UNATTENDED through `action_required` gates by performing the **owner's** approval
+> programmatically (test repo). This does NOT weaken the model: the native gates **stay**.
+
+- The `production` GitHub Environment reviewer + the bot-PR "approve and run" policy are **🟩 still present**.
+- `ci/lib/approval.mjs` (pure) + `ci/scripts/auto-approve.mjs` perform the owner's click as **🟨 TEST-MODE
+  delegated approval**, every action logged `no human reviewed at approval time`. NOT presented as human verification.
+- **REFUSE unless ALL hold:** repo allowlist · run in dispatch ledger · `loop4-test` label · head-SHA match ·
+  branch prefix · no sensitive-file changes (.github/workflows, infra, deploy, auth) · within budget · before
+  deadline · no `HARNESS_KILL` · **DRY-RUN default, live only `AUTO_APPROVE_TEST_MODE=1`**. 10 refusal fixtures prove it.
+- Production: a human still approves. This is a demo/test convenience, not a removal of governance.

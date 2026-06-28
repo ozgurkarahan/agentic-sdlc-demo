@@ -50,7 +50,7 @@ Each stage is a "functionality in the repo" the presenter can jump to independen
 | Fallback | Trigger the fallback path once | Pre-baked branch / recording renders the same outcome |
 | Setup | Follow setup instructions on a clean environment | Environment reproduces from scratch with no hidden state |
 | Asset integrity | Lint `docs/agentic-engineering-on-github/harness/**/*.yml` + check the asset's internal links | All harness YAML parses; every cross-doc link resolves |
-| **Tier-1 demo (runnable, offline)** | `node demos/validate/run.mjs` | `49/49 fixtures correct`, `negatives caught: 28/28`, exit 0 — each gate labelled by enforcement type |
+| **Tier-1 demo (runnable, offline)** | `node demos/validate/run.mjs` | `69/69 fixtures correct`, `negatives caught: 42/42`, exit 0 — each gate labelled by enforcement type |
 | **Harness run-status gate (Loop 3)** | `node demos/validate/run.mjs --filter deployment` | deployment positives pass + run-conclusion negatives caught (red-for-SHA, green-for-wrong-SHA, older-green+newer-red, queued-timeout, cancelled) |
 | **Harness scenario (one)** | `node demos/validate/run.mjs --scenario s1` | one scenario's positives pass + negatives caught (scenario axis — `CONTRACT.md` §10) |
 | **Tier-1 sample app** | `npm --prefix demos/sample-app ci && npm --prefix demos/sample-app test` | 15 unit+e2e tests green (the "before" URL-shortener, no rate limiting yet) |
