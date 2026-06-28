@@ -47,19 +47,25 @@ demos/
   ci/                    # D2 — REAL verification (replaces every harness `echo`)
     workflows/           #   real workflow YAMLs (target branch: master) — instantiated into the T2 repo at D7
     scripts/             #   the underlying runnable logic (callable locally by the validator, no Actions needed)
+      rubrics/           #   (Loop 2) reusable acceptance-oracle modules (e.g. rate-limit.mjs) a scenario can adopt
   agents/                # D3 — enriched personas (orchestrator.agent.md) — see §6 (harness personas enriched in place)
   orchestrator/          # D4 — the dispatcher (plan-approved label gate + wave-order fan-out)
-  fixtures/              # D5 — seeded positive/negative fixtures per agent (see §4 schema)
-  validate/              # D5 — Tier-1 deterministic validation runner
+  scenarios/             # (Loop 2) self-contained scenario folders — see §10. SUPERSEDES the flat fixtures/ below.
+    <id>/                #   scenario.json (manifest+oracle decl) · rubric.mjs · variants/ · fixtures/<agent>/<case>.json
+  validate/              # D5 — Tier-1 deterministic validation runner (scenario-aware; `--scenario <id>`)
   evidence/              # T3 — pre-recorded fallback evidence (populated at D8)
 ```
+> **Loop-2 note:** D5 originally placed fixtures flat at `demos/fixtures/<agent>/`. Loop 2 introduced a
+> **scenario axis** — fixtures now live under `demos/scenarios/<id>/fixtures/<agent>/` and S1 migrated to
+> `s1-rate-limit`. See **§10**. The S1 *story/contract* is unchanged; only the on-disk layout generalized.
 
 **Path-ownership rule (the demo eats its own dogfood):** each unit/agent writes ONLY inside its box.
 The `path-scope-check` (D2) enforces this for PRs; the dispatcher (D4) assigns non-overlapping paths.
 
 ## 4. Fixture schema (the contract D5 implements)
 
-Every fixture is a JSON file at `demos/fixtures/<agent>/<case>.json`:
+Every fixture is a JSON file at `demos/scenarios/<id>/fixtures/<agent>/<case>.json` *(Loop 2 layout;
+was `demos/fixtures/<agent>/<case>.json` pre-scenario-axis — see §10)*:
 
 ```jsonc
 {
@@ -147,3 +153,37 @@ unavailable.**
   pre-recorded evidence, report "not validated," demo still counts as done.
 - **Cross-cutting:** honesty labels intact; `ATTRIBUTION.md` present; no secret-dependent required check;
   `AGENT.md` How-to-Verify gains a "run the demo" row; asset docs cross-link `demos/`.
+
+---
+
+## 10. Scenario axis (Loop 2 — ADDITIVE generalization, 2026-06-28)
+
+> The original D0–D9 harness was **mono-scenario** (hard-wired to S1 rate-limiting). Loop 2 added a
+> scenario dimension so the *same* harness can be stress-tested with new intents without editing the
+> validator or the oracle. **This is additive: the frozen S1 story (§2) and fixture schema (§4) are
+> unchanged — only the on-disk layout and the oracle's location generalized.** The methodology that
+> governs how we add + validate scenarios is `demos/HARNESS_TESTING.md`; the loop-memory of what each
+> scenario tested/broke/fixed is `demos/HARNESS_CHANGELOG.md`.
+
+**A scenario is one self-contained folder:**
+```
+demos/scenarios/<id>/
+  scenario.json     # manifest: { id, title, intent, acceptance, evalRubric, evalDefaults:{route,method,max}, e2eTest }
+  rubric.mjs        # the scenario's acceptance ORACLE — exports { evaluate({probe,args}) -> {checks,signals,pass}, meta }
+  variants/         # candidate app middlewares the eval mounts (good + negative variants), named <appVariant>.mjs
+  fixtures/<agent>/<case>.json   # the per-agent positive/negative fixtures (schema = §4, unchanged)
+```
+
+**Who owns scenario knowledge (the honesty of the generalization):**
+- `demos/validate/run.mjs` and `demos/ci/scripts/eval-rubric.mjs` own **NO** scenario specifics. The runner
+  is a generic HTTP-probe harness; the validator's `eval-rubric` driver loads the scenario's declared
+  `rubric.mjs` and trusts the rubric's **own** `signals` array. No `429`/`Retry-After`/`threshold` literal
+  lives in the runner or validator any more — it lives in `ci/scripts/rubrics/rate-limit.mjs`, which S1's
+  `rubric.mjs` adopts. A new scenario ships its own rubric (or adopts a shared one) + variants + fixtures.
+- **Discovery:** the validator scans `demos/scenarios/*/fixtures/**.json`; the scenario id is the folder.
+  `node demos/validate/run.mjs --scenario <id>` runs one scenario; no flag runs all.
+- **Default-rubric back-compat:** `eval-rubric.mjs` with no `--rubric` still uses the built-in rate-limit
+  rubric, so the existing `tests-and-evals.yml` CI caller is unaffected.
+
+**Adding a scenario never edits the validator/runner — only adds a folder.** That property *is* the
+Loop-2 success criterion ("no S1 hardcoding remains").

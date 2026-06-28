@@ -138,16 +138,17 @@ if (-not $acrId) {
 
 function Enable-AcrPull($appName) {
   # 1) ensure the app has a system-assigned managed identity
-  $pid = az containerapp identity show -g $ResourceGroup -n $appName --query principalId -o tsv 2>$null
-  if (-not $pid) {
+  # NOTE: use $miPid, NOT $pid — $PID is a read-only PowerShell automatic variable (the process id).
+  $miPid = az containerapp identity show -g $ResourceGroup -n $appName --query principalId -o tsv 2>$null
+  if (-not $miPid) {
     az containerapp identity assign -g $ResourceGroup -n $appName --system-assigned --only-show-errors | Out-Null
-    $pid = az containerapp identity show -g $ResourceGroup -n $appName --query principalId -o tsv
+    $miPid = az containerapp identity show -g $ResourceGroup -n $appName --query principalId -o tsv
   }
   # 2) grant that identity AcrPull on the registry
-  $havePull = az role assignment list --assignee $pid --scope $acrId --query "[?roleDefinitionName=='AcrPull'] | [0].id" -o tsv 2>$null
+  $havePull = az role assignment list --assignee $miPid --scope $acrId --query "[?roleDefinitionName=='AcrPull'] | [0].id" -o tsv 2>$null
   if (-not $havePull) {
     for ($i = 0; $i -lt 6; $i++) {
-      try { az role assignment create --assignee-object-id $pid --assignee-principal-type ServicePrincipal --role AcrPull --scope $acrId --only-show-errors | Out-Null; break }
+      try { az role assignment create --assignee-object-id $miPid --assignee-principal-type ServicePrincipal --role AcrPull --scope $acrId --only-show-errors | Out-Null; break }
       catch { Start-Sleep -Seconds 5 }
     }
   }
@@ -175,8 +176,8 @@ else { Ok "Service principal already exists." }
 # ---------------------------------------------------------------------------
 Step "7. OIDC federated credentials (ENVIRONMENT-scoped — no branch, no pull_request)"
 $subjects = @{
-  "$AppRegName-env-staging"    = "repo:$Repo:environment:staging"
-  "$AppRegName-env-production" = "repo:$Repo:environment:production"
+  "$AppRegName-env-staging"    = "repo:${Repo}:environment:staging"
+  "$AppRegName-env-production" = "repo:${Repo}:environment:production"
 }
 $existing = az ad app federated-credential list --id $appId --query "[].subject" -o tsv 2>$null
 foreach ($name in $subjects.Keys) {

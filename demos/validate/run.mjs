@@ -3,6 +3,11 @@
 // ARTIFACT CONTRACT holds: each positive fixture passes and, crucially, each NEGATIVE
 // fixture is CAUGHT. A negative that slips through is "theater" and fails the suite.
 //
+// SCENARIO-GENERAL (Loop 2): fixtures live under demos/scenarios/<id>/fixtures/<agent>/.
+// The runner owns NO scenario knowledge — the acceptance ORACLE (the eval rubric + the
+// failed-check → signal mapping) is declared by each scenario (scenario.json + rubric.mjs),
+// so adding a new scenario never edits this file. `--scenario <id>` runs one scenario.
+//
 // HONESTY (per the plan's validation scope): T1 validates harness LOGIC + artifact
 // contracts with seeded fixtures — NOT live-agent quality. Live agent behaviour is only
 // exercised in T3 (real @copilot fleet). Each row is labelled by enforcement type so
@@ -13,19 +18,19 @@
 // Drivers map a fixture's semantic `input` (CONTRACT §4) to the real D2 check scripts:
 //   plan-lint · path-scope · trajectory · eval-rubric · pin-check · doc-coupling · smoke · dispatch
 //
-// Usage: node demos/validate/run.mjs [--json] [--filter <agent>]
+// Usage: node demos/validate/run.mjs [--json] [--filter <agent>] [--scenario <id>]
 // Exit 0 only if every fixture's actual outcome === its expected outcome (and expected
 // signals are present). Exit 1 if any fixture is mis-handled (theater or false block).
 
 import { readdirSync, statSync, readFileSync, existsSync } from 'node:fs';
-import { resolve, dirname, join } from 'node:path';
+import { resolve, dirname, join, relative, sep } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { execFileSync } from 'node:child_process';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const DEMOS = resolve(HERE, '..');
 const ROOT = resolve(DEMOS, '..');
-const FIXTURES = join(DEMOS, 'fixtures');
+const SCENARIOS = join(DEMOS, 'scenarios');
 const CI_SCRIPTS = join(DEMOS, 'ci', 'scripts');
 const SAMPLE_APP = join(DEMOS, 'sample-app');
 const APP_DIST = join(SAMPLE_APP, 'dist', 'app.js');
@@ -39,16 +44,18 @@ const ENFORCE_EMOJI = {
 };
 
 function parseArgs(argv) {
-  const args = { json: false, filter: null };
+  const args = { json: false, filter: null, scenario: null };
   for (let i = 2; i < argv.length; i += 1) {
     if (argv[i] === '--json') args.json = true;
     else if (argv[i] === '--filter') args.filter = argv[++i];
+    else if (argv[i] === '--scenario') args.scenario = argv[++i];
   }
   return args;
 }
 
 function walk(dir) {
   const out = [];
+  if (!existsSync(dir)) return out;
   for (const name of readdirSync(dir)) {
     const p = join(dir, name);
     if (statSync(p).isDirectory()) out.push(...walk(p));
@@ -57,18 +64,46 @@ function walk(dir) {
   return out;
 }
 
+// Scenario manifests are loaded once and cached by id.
+const manifestCache = new Map();
+function loadManifest(scenarioId) {
+  if (manifestCache.has(scenarioId)) return manifestCache.get(scenarioId);
+  const p = join(SCENARIOS, scenarioId, 'scenario.json');
+  let manifest = { id: scenarioId, title: scenarioId };
+  try { manifest = { id: scenarioId, ...JSON.parse(readFileSync(p, 'utf8')) }; } catch { /* default */ }
+  manifestCache.set(scenarioId, manifest);
+  return manifest;
+}
+
 function loadFixtures() {
-  return walk(FIXTURES)
+  return walk(SCENARIOS)
     .map((p) => {
+      // Only files under demos/scenarios/<id>/fixtures/** are fixtures.
+      const rel = relative(SCENARIOS, p).split(sep);
+      if (rel.length < 3 || rel[1] !== 'fixtures') return null;
+      const scenarioId = rel[0];
       try {
         const json = JSON.parse(readFileSync(p, 'utf8'));
-        return json && json.agent && json.expect ? { path: p, ...json } : null;
+        if (!json || !json.agent || !json.expect) return null; // skip data files (e.g. bad-deps-package.json)
+        const manifest = loadManifest(scenarioId);
+        return {
+          path: p,
+          scenario: scenarioId,
+          scenarioDir: join(SCENARIOS, scenarioId),
+          manifest,
+          ...json,
+        };
       } catch {
         return null;
       }
     })
     .filter(Boolean)
-    .sort((a, b) => (a.agent + a.case).localeCompare(b.agent + b.case));
+    .sort((a, b) => (a.scenario + a.agent + a.case).localeCompare(b.scenario + b.agent + b.case));
+}
+
+function matchesScenario(scenarioId, arg) {
+  if (!arg) return true;
+  return scenarioId === arg || scenarioId.split('-')[0] === arg;
 }
 
 function runScript(scriptName, args) {
@@ -117,21 +152,20 @@ const drivers = {
     return { outcome: j.pass ? 'pass' : 'blocked', signals };
   },
 
+  // Scenario-general: load the scenario's declared rubric + the variant the fixture names,
+  // and trust the rubric's OWN failed-check signals. No 429/threshold knowledge lives here.
   'eval-rubric'(fx) {
-    const variantMap = {
-      good: 'good.mjs',
-      'no-429': 'no-429.mjs',
-      'missing-retry-after': 'missing-retry-after.mjs',
-    };
-    const variant = resolve(FIXTURES, 'quality-test', variantMap[fx.input.appVariant]);
-    const r = runScript('eval-rubric.mjs', ['--app', APP_DIST, '--variant', variant, '--json']);
+    const rubric = resolve(fx.scenarioDir, fx.manifest.evalRubric ?? 'rubric.mjs');
+    const variant = resolve(fx.scenarioDir, 'variants', `${fx.input.appVariant}.mjs`);
+    const a = ['--app', APP_DIST, '--variant', variant, '--rubric', rubric, '--json'];
+    const d = fx.manifest.evalDefaults ?? {};
+    if (d.route) a.push('--route', d.route);
+    if (d.method) a.push('--method', d.method);
+    if (d.max != null) a.push('--max', String(d.max));
+    const r = runScript('eval-rubric.mjs', a);
     const j = parseJson(r.stdout);
     if (!j) return { outcome: 'error', signals: [] };
-    const signals = [];
-    if (!j.checks?.limiting_present) signals.push('no-429');
-    else if (!j.checks?.threshold_correct) signals.push('wrong-threshold');
-    if (!j.checks?.retry_after_present) signals.push('missing-retry-after');
-    return { outcome: j.pass ? 'pass' : 'blocked', signals };
+    return { outcome: j.pass ? 'pass' : 'blocked', signals: j.signals ?? [] };
   },
 
   'pin-check'(fx) {
@@ -193,7 +227,15 @@ async function main() {
   ensureBuilt();
 
   let fixtures = loadFixtures();
+  if (args.scenario) fixtures = fixtures.filter((f) => matchesScenario(f.scenario, args.scenario));
   if (args.filter) fixtures = fixtures.filter((f) => f.agent === args.filter);
+
+  if (fixtures.length === 0) {
+    const known = [...new Set(loadFixtures().map((f) => f.scenario))];
+    console.error(`validate: no fixtures matched (scenario=${args.scenario ?? '*'}, filter=${args.filter ?? '*'}). Known scenarios: ${known.join(', ') || '(none)'}`);
+    process.exitCode = 2;
+    return;
+  }
 
   const results = [];
   for (const fx of fixtures) {
@@ -224,7 +266,7 @@ async function main() {
       passed,
       failed,
       results: results.map((r) => ({
-        agent: r.fx.agent, case: r.fx.case, polarity: r.fx.polarity,
+        scenario: r.fx.scenario, agent: r.fx.agent, case: r.fx.case, polarity: r.fx.polarity,
         enforcement: r.fx.enforcement, driver: r.fx.driver,
         expected: r.fx.expect.outcome, actual: r.actual.outcome,
         signals: r.actual.signals, ok: r.ok, reason: r.reason,
@@ -239,24 +281,41 @@ async function main() {
 
 function printMatrix(results) {
   console.log('\n  Tier-1 harness validation — artifact contracts (seeded fixtures, not live-agent quality)\n');
-  const byAgent = new Map();
+
+  // Group by scenario, then agent, so a multi-scenario run stays readable.
+  const byScenario = new Map();
   for (const r of results) {
-    if (!byAgent.has(r.fx.agent)) byAgent.set(r.fx.agent, []);
-    byAgent.get(r.fx.agent).push(r);
+    if (!byScenario.has(r.fx.scenario)) byScenario.set(r.fx.scenario, []);
+    byScenario.get(r.fx.scenario).push(r);
   }
-  for (const [agent, rows] of byAgent) {
-    console.log(`  ${agent}`);
-    for (const r of rows) {
-      const mark = r.ok ? '✅' : '❌';
-      const pol = r.fx.polarity === 'negative' ? 'neg' : 'pos';
-      const enf = ENFORCE_EMOJI[r.fx.enforcement] ?? r.fx.enforcement;
-      const detail = r.ok
-        ? `${r.fx.expect.outcome}`
-        : `${r.reason}  (expected ${r.fx.expect.outcome}, got ${r.actual.outcome})`;
-      console.log(`    ${mark} [${pol}] ${enf.padEnd(12)} ${r.fx.case}`);
-      console.log(`         → ${detail}`);
+
+  for (const [scenario, srows] of byScenario) {
+    const title = srows[0]?.fx.manifest?.title ?? scenario;
+    const sPass = srows.filter((r) => r.ok).length;
+    const sNeg = srows.filter((r) => r.fx.polarity === 'negative');
+    const sNegCaught = sNeg.filter((r) => r.ok).length;
+    console.log(`  ╔══ scenario: ${scenario} — ${title}`);
+    console.log(`  ║   ${sPass}/${srows.length} fixtures correct · negatives caught ${sNegCaught}/${sNeg.length}\n`);
+
+    const byAgent = new Map();
+    for (const r of srows) {
+      if (!byAgent.has(r.fx.agent)) byAgent.set(r.fx.agent, []);
+      byAgent.get(r.fx.agent).push(r);
     }
-    console.log('');
+    for (const [agent, rows] of byAgent) {
+      console.log(`  ║ ${agent}`);
+      for (const r of rows) {
+        const mark = r.ok ? '✅' : '❌';
+        const pol = r.fx.polarity === 'negative' ? 'neg' : 'pos';
+        const enf = ENFORCE_EMOJI[r.fx.enforcement] ?? r.fx.enforcement;
+        const detail = r.ok
+          ? `${r.fx.expect.outcome}`
+          : `${r.reason}  (expected ${r.fx.expect.outcome}, got ${r.actual.outcome})`;
+        console.log(`  ║   ${mark} [${pol}] ${enf.padEnd(12)} ${r.fx.case}`);
+        console.log(`  ║        → ${detail}`);
+      }
+    }
+    console.log('  ╚════════════════════════════════════════════\n');
   }
 
   // Human gates are not executable in T1 — surface them as INFO so the matrix is complete.
@@ -278,13 +337,15 @@ function printMatrix(results) {
   const failed = results.length - passed;
   const negatives = results.filter((r) => r.fx.polarity === 'negative');
   const negCaught = negatives.filter((r) => r.ok).length;
+  const scenarios = [...new Set(results.map((r) => r.fx.scenario))];
   console.log(`  ─────────────────────────────────────────────`);
+  console.log(`  scenarios: ${scenarios.join(', ')}`);
   console.log(`  ${failed === 0 ? '✅ ALL GREEN' : '❌ FAILURES'}  ${passed}/${results.length} fixtures correct`);
   console.log(`  negatives caught (anti-theater): ${negCaught}/${negatives.length}`);
   if (failed > 0) {
     console.log('\n  Mis-handled fixtures:');
     for (const r of results.filter((x) => !x.ok)) {
-      console.log(`    ✗ ${r.fx.agent}/${r.fx.case} — ${r.reason}`);
+      console.log(`    ✗ ${r.fx.scenario}/${r.fx.agent}/${r.fx.case} — ${r.reason}`);
     }
   }
   console.log('');
