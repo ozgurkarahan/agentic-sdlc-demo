@@ -45,12 +45,13 @@ param(
     'Evals (trajectory + rubric)',
     'Path-scope (fleet lane check)',
     'Dependency review (supply-chain)',
-    'CodeQL (code scanning)',
+    'CodeQL (code scanning) (javascript-typescript)',
     'Hallucinated-dependency / slopsquatting check'
   ),
   [switch]   $WithMergeQueue,
   [switch]   $Force,
   [switch]   $DryRun,
+  [switch]   $EnvironmentsOnly,
   [switch]   $Remove
 )
 
@@ -110,12 +111,27 @@ $prodBody = @{
 Invoke-GhApi -Method PUT -Path "repos/$Repo/environments/production" -JsonBody $prodBody | Out-Null
 Info "production environment ensured (required reviewer = $Reviewer, id=$reviewerId). NATIVE human release gate."
 
+# EnvironmentsOnly: bootstrap order (#4) requires the production reviewer gate to exist BEFORE the first
+# deploy.yml run, but the branch ruleset must come AFTER deploy.yml is on master (a required-PR ruleset
+# would block the direct workflow-token push of deploy.yml). This switch creates just the Environments.
+if ($EnvironmentsOnly) { Step "Done (environments only - run again without -EnvironmentsOnly after deploy.yml lands)"; return }
+
 # -- 2. Verify required-check NAMES exist before requiring them (#4 self-lock guard) --
 Step "2. Verifying required-check names have registered (anti-self-lock, gap-review #4)"
 $seen = @()
+# Gate workflows run on pull_request / merge_group (R7), NOT push — so $Branch HEAD often has NO
+# check-runs of its own. Union the names seen on the branch HEAD with those on recent PR head commits
+# (incl. closed/merged PRs, whose head SHA + check-runs persist) so this guard reflects what actually
+# runs on PRs targeting $Branch. Without this, the guard would force -Force on every repo whose
+# required checks don't fire on push, defeating its anti-self-lock purpose.
+try { $seen += @(gh api "repos/$Repo/commits/$Branch/check-runs" --jq '.check_runs[].name' 2>$null) } catch {}
 try {
-  $seen = gh api "repos/$Repo/commits/$Branch/check-runs" --jq '.check_runs[].name' 2>$null | Sort-Object -Unique
-} catch { $seen = @() }
+  $prShas = @(gh api "repos/$Repo/pulls?state=all&per_page=15&sort=updated&direction=desc" --jq '.[].head.sha' 2>$null)
+  foreach ($psha in ($prShas | Select-Object -First 15)) {
+    if ($psha) { $seen += @(gh api "repos/$Repo/commits/$psha/check-runs" --jq '.check_runs[].name' 2>$null) }
+  }
+} catch {}
+$seen = @($seen | Where-Object { $_ } | Sort-Object -Unique)
 $present = @(); $missing = @()
 foreach ($c in $RequiredChecks) { if ($seen -contains $c) { $present += $c } else { $missing += $c } }
 foreach ($c in $present) { Info "  [ok] registered: $c" }

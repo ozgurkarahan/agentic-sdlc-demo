@@ -6,7 +6,7 @@
   "driver": "pin-check",
   "title": "A synthetic manifest (DECOUPLED from the rate-limit story) with hallucinated deps (expresss/axioss) + mutable specs (left-pad:* , evil-utils:latest) and no lockfile → security gate RED",
   "input": {
-    "manifest": "demos/fixtures/security/bad-deps-package.json",
+    "manifest": "demos/scenarios/s1-rate-limit/fixtures/security/bad-deps-package.json",
     "sink": "child_process.exec(req.query.cmd) — modelled as a CodeQL finding (native GHAS) in T2, not executed in T1"
   },
   "expect": {

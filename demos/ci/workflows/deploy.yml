@@ -99,14 +99,60 @@ jobs:
           FAULT: ${{ (github.event_name == 'workflow_dispatch' && inputs.inject_fault) && '1' || '0' }}
         run: |
           RG="${{ vars.AZURE_RG }}"; APP="${{ vars.STAGING_APP }}"
+          # Unique per-run suffix: a re-dispatch of the SAME commit (e.g. the fault variants) must mint a
+          # FRESH revision with the intended env vars, never collide with / silently reuse an existing one.
+          SUFFIX="sha-$(echo '${{ github.sha }}' | cut -c1-8)-r${{ github.run_id }}"
+          NEW="$APP--$SUFFIX"
           az containerapp ingress update -g "$RG" -n "$APP" --target-port 3000 -o none   # retarget off the seed port (idempotent)
           az containerapp update -g "$RG" -n "$APP" \
             --image "${{ steps.push.outputs.image }}" \
+            --revision-suffix "$SUFFIX" \
             --set-env-vars "FAULT_HEALTHZ=$FAULT" "FAULT_HEALTHZ_PROD=0" -o none
+          # ANTI-STALE-GREEN: `az containerapp update` returns once the control plane accepts the revision,
+          # but ingress keeps serving the PREVIOUS revision until the new one is ready. Smoking immediately
+          # races that rollout and can validate the stale-good revision (false GO). Wait until OUR new
+          # revision is the latest-ready (== the one ingress now serves) BEFORE smoking.
+          echo "Waiting for $NEW to become latestReadyRevisionName before smoke…"
+          for i in $(seq 1 40); do
+            READY="$(az containerapp show -g "$RG" -n "$APP" --query properties.latestReadyRevisionName -o tsv 2>/dev/null || echo '')"
+            echo "  wait $i: latestReady=$READY"
+            [ "$READY" = "$NEW" ] && { echo "Revision $NEW is live + ready."; break; }
+            [ "$i" = "40" ] && { echo "::error::$NEW never became latest-ready"; exit 1; }
+            sleep 5
+          done
           FQDN="$(az containerapp show -g "$RG" -n "$APP" --query properties.configuration.ingress.fqdn -o tsv)"
           echo "STAGING_URL=https://$FQDN/healthz" >> "$GITHUB_ENV"
+          echo "STAGING_BASE=https://$FQDN" >> "$GITHUB_ENV"
       - name: Live smoke (staging)        # layered — retries cover ACA scale-to-zero cold start
         run: node ci/scripts/smoke-check.mjs --url "$STAGING_URL" --retries 15 --delay 4000
+      # R13 post-deploy E2E gate (layered) — SCENARIO-GENERAL. Planning MANDATES a real-results E2E unit;
+      # @copilot AUTHORS it under test/e2e/*.e2e.test.ts; this step WIRES whatever it authored as a
+      # post-deploy gate vs the LIVE staging URL (after smoke, before promotion). A failing/absent E2E
+      # fails deploy-staging ⇒ prod untouched. No scenario constant (429, MAX_URL_LEN, …) lives in this YAML.
+      - name: E2E real-results acceptance (live staging URL)
+        # The harness-authored test reads TEST_BASE_URL (vitest reserves BASE_URL for Vite's base path,
+        # so a real BASE_URL is shadowed to "/" inside the runner). Any acceptance threshold the active
+        # scenario needs (e.g. RATE_LIMIT_MAX for S1, MAX_URL_LEN for S2) is declared by the scenario in
+        # the committed, optional test/e2e/e2e.env — NOT hardcoded here — so this gate is feature-agnostic.
+        run: |
+          shopt -s nullglob
+          E2E=(test/e2e/*.e2e.test.ts)
+          if [ ${#E2E[@]} -eq 0 ]; then
+            echo "::error::Planning demanded a real-results E2E unit (test/e2e/*.e2e.test.ts) but the Dev fleet has not delivered one — refusing to promote without the live acceptance test."
+            exit 1
+          fi
+          npm ci
+          export TEST_BASE_URL="$STAGING_BASE"
+          # Scenario-declared acceptance env (optional): KEY=VALUE lines, '#' comments. A fully
+          # self-configuring test needs none; S1 ships RATE_LIMIT_MAX=50, S2 ships MAX_URL_LEN=2048, etc.
+          if [ -f test/e2e/e2e.env ]; then
+            echo "Loading scenario-declared E2E acceptance env from test/e2e/e2e.env"
+            set -a; . ./test/e2e/e2e.env; set +a
+          fi
+          echo "Running harness-authored E2E (${E2E[*]}) against $TEST_BASE_URL"
+          npx vitest run test/e2e --reporter=json --outputFile=e2e-result.json
+          # ANTI-THEATER skip-guard: a skipped/empty suite exits 0; that must NOT count as a green gate.
+          node -e "const r=require('./e2e-result.json');const p=r.numPassedTests||0,s=r.numPendingTests||0,t=r.numTotalTests||0;console.log('E2E executed: passed='+p+' skipped='+s+' total='+t);if(p<1){console.error('::error::E2E gate did not execute a passing live test (skip!=green) — refusing to promote.');process.exit(1);}"
 
   # ── 3. Deploy PRODUCTION by the SAME digest. Environment reviewer pause → 0% canary → shift → rollback. ──
   deploy-production:
@@ -146,7 +192,10 @@ jobs:
           PROD_FAULT: ${{ (github.event_name == 'workflow_dispatch' && inputs.inject_prod_fault) && '1' || '0' }}
         run: |
           RG="${{ vars.AZURE_RG }}"; APP="${{ vars.PROD_APP }}"
-          SUFFIX="sha-$(echo '${{ github.sha }}' | cut -c1-8)"
+          # Unique per-run suffix (same reason as staging): a re-dispatch of the same commit — exactly the
+          # inject_prod_fault rollback test — must mint a FRESH canary, never collide with the last-good
+          # revision that already carries this SHA.
+          SUFFIX="sha-$(echo '${{ github.sha }}' | cut -c1-8)-r${{ github.run_id }}"
           az containerapp ingress update -g "$RG" -n "$APP" --target-port 3000 -o none   # idempotent retarget off seed
           az containerapp update -g "$RG" -n "$APP" \
             --image "${{ needs.deploy-staging.outputs.image }}" \

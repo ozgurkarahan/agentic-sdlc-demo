@@ -51,6 +51,7 @@ Each stage is a "functionality in the repo" the presenter can jump to independen
 | Setup | Follow setup instructions on a clean environment | Environment reproduces from scratch with no hidden state |
 | Asset integrity | Lint `docs/agentic-engineering-on-github/harness/**/*.yml` + check the asset's internal links | All harness YAML parses; every cross-doc link resolves |
 | **Tier-1 demo (runnable, offline)** | `node demos/validate/run.mjs` | `19/19 fixtures correct`, `negatives caught: 10/10`, exit 0 — each gate labelled by enforcement type |
+| **Harness scenario (one)** | `node demos/validate/run.mjs --scenario s1` | one scenario's positives pass + negatives caught (scenario axis — `CONTRACT.md` §10) |
 | **Tier-1 sample app** | `npm --prefix demos/sample-app ci && npm --prefix demos/sample-app test` | 15 unit+e2e tests green (the "before" URL-shortener, no rate limiting yet) |
 
 **Definition of done:** the full input→lifecycle demo runs end-to-end from the written script on a clean environment, AND the fallback plan has been exercised at least once.
@@ -70,10 +71,13 @@ Each stage is a "functionality in the repo" the presenter can jump to independen
 # Demo flows live under demos/ ; talking points + setup + fallback under docs/
 
 # Tier-1 runnable demo (offline, deterministic):
-node demos/validate/run.mjs                 # full 19-fixture gate matrix (anti-theater)
+node demos/validate/run.mjs                 # full gate matrix, all scenarios (anti-theater)
+node demos/validate/run.mjs --scenario s1   # one scenario (scenario axis — CONTRACT.md §10)
 node demos/validate/run.mjs --filter security-compliance   # one agent's positive+negative
 node demos/orchestrator/cli.mjs --plan demos/orchestrator/example-plan.json   # dispatcher fan-out
 # Presenter golden path (stage → command → artifact → negative caught): demos/DEMO_SCRIPT.md
+# How we test + improve the harness (the repeatable protocol):          demos/HARNESS_TESTING.md
+# Loop-memory: what each scenario tested / broke / fixed (agent×scenario): demos/HARNESS_CHANGELOG.md
 # Entry point + tier map + honesty labels:                              demos/README.md
 ```
 
@@ -81,7 +85,7 @@ node demos/orchestrator/cli.mjs --plan demos/orchestrator/example-plan.json   # 
 
 | Path | Description |
 |------|-------------|
-| `demos/` | Runnable demo: `sample-app/` (system under test) · `orchestrator/` (dispatcher) · `ci/scripts/` + `ci/workflows/` (real verification) · `fixtures/` (seeded positive/negative cases) · `validate/run.mjs` (Tier-1 gate matrix) · `CONTRACT.md` (keystone) · `DEMO_SCRIPT.md` (presenter golden path) · `README.md` (entry point). The 7 enriched agent personas + `AGENTS.md` live single-source in the asset `harness/` (below); `demos/agents/` is just a pointer. |
+| `demos/` | Runnable demo: `sample-app/` (system under test) · `orchestrator/` (dispatcher) · `ci/scripts/` + `ci/workflows/` (real verification) · `scenarios/<id>/` (per-scenario manifest+rubric+variants+fixtures — scenario axis) · `validate/run.mjs` (gate matrix, `--scenario`) · `CONTRACT.md` (keystone, §10 = scenario axis) · `HARNESS_TESTING.md` (how we test+improve the harness) · `HARNESS_CHANGELOG.md` (loop-memory) · `DEMO_SCRIPT.md` (presenter golden path) · `README.md` (entry point). The 7 enriched agent personas + `AGENTS.md` live single-source in the asset `harness/` (below); `demos/agents/` is just a pointer. |
 | `docs/agentic-engineering-on-github/` | Reusable white-label asset: the Story + Agents/Skills/Harness + GitHub pipeline + drop-in `harness/` examples |
 | `docs/` | Talking points, setup, fallback plan, the narrative |
 | `inputs/` *(add in first session)* | Seed artifacts: sample requirement / meeting notes / action item |

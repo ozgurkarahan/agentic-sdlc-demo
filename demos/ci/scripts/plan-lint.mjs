@@ -53,15 +53,29 @@ async function main() {
 
   const violations = [];
 
-  // Reuse the dispatcher's structural validation (ids, unknown deps, cycles).
+  const units = Array.isArray(plan.units) ? plan.units : [];
+
+  // Reuse the dispatcher's strict structural validation (ids, unknown deps, cycles) for FULL plans
+  // (the tracking/PRD issue). A single work-unit issue, however, is linted in ISOLATION: its
+  // cross-unit dependsOn edges reference sibling units that are intentionally absent from a one-unit
+  // plan, so the dispatcher's unknown-dep check would mis-fire and flag a perfectly valid ordered
+  // unit (e.g. the E2E unit U4 dependsOn U1,U2). The authoritative DAG/structure check runs on the
+  // tracking issue (full plan); for a lone unit we apply only the unit-local structural rules
+  // (string id, no self-dependency) plus the A/B/C rules below.
+  const singleUnit = units.length === 1 || plan.source === 'work-unit-form';
   try {
     const dispatch = await import(pathToFileURL(resolve(HERE, '..', '..', 'orchestrator', 'dispatch.mjs')).href);
-    dispatch.validatePlan(plan);
+    if (!singleUnit) {
+      dispatch.validatePlan(plan);
+    } else {
+      for (const u of units) {
+        if (!u || typeof u.id !== 'string') throw new TypeError('every unit needs a string id');
+        if ((u.dependsOn ?? []).includes(u.id)) throw new TypeError(`unit ${u.id} depends on itself`);
+      }
+    }
   } catch (err) {
     violations.push({ rule: 'structure', signal: 'malformed-plan', detail: err.message });
   }
-
-  const units = Array.isArray(plan.units) ? plan.units : [];
 
   // Rule A — a dependent unit marked parallel-safe.
   for (const u of units) {
