@@ -5,7 +5,7 @@
 > **harness defect** found, and the **fix applied**. Methodology = `HARNESS_TESTING.md`. Session ledger
 > mirror = `files/validation-log.md` (L13+). The frozen story/contract = `CONTRACT.md`.
 
-Legend: ✅ behaved as expected · 🔧 defect found → fixed · ⏳ not yet exercised · ⛔ KNOWN-DEFECT (≤3 tries) ·
+Legend: ✅ behaved as expected · 🔧 defect found → fixed · 🚀 driven live (in progress) · ⏳ not yet exercised · ⛔ KNOWN-DEFECT (≤3 tries) ·
 `—` not stressed by this scenario.
 
 ---
@@ -14,15 +14,15 @@ Legend: ✅ behaved as expected · 🔧 defect found → fixed · ⏳ not yet ex
 
 | Agent / gate | S1 rate-limit | S2 input-validation | S3 risky-dep | S4 docs/scope | S5 malformed-plans |
 |---|---|---|---|---|---|
-| Planning | ✅ | ✅ | ✅ | — | ✅ |
-| Rubber-Duck | ✅ | — | — | — | ✅ |
-| Dispatcher / Orchestrator | ✅ | — | — | — | ✅ |
-| Dev-fleet (path-scope) | ✅ | ⏳ (live) | — | ✅ | — |
-| Dev-fleet (trajectory) | ✅ | ⏳ (live) | — | ✅ | — |
-| Quality-Test (eval-rubric) | ✅ | ✅ | — | — | — |
+| Planning | ✅ | ✅ (+live #23) | ✅ | — | ✅ |
+| Rubber-Duck | ✅ | ✅ (live plan-lint #23) | — | — | ✅ |
+| Dispatcher / Orchestrator | ✅ | ✅ (live fan-out/refusal) | — | — | ✅ |
+| Dev-fleet (path-scope) | ✅ | ✅ live @copilot #27 (declaredPaths==touched) | — | ✅ | — |
+| Dev-fleet (trajectory) | ✅ | ✅ live @copilot #27 (requiredTest added) | — | ✅ | — |
+| Quality-Test (eval-rubric) | ✅ | ✅ (determ. L13) | — | — | — |
 | Security (pin/slopsquat) | ✅ | — | ✅ | — | — |
 | Code-Review (doc-coupling) | ✅ | — | — | ✅ | — |
-| Deployment (smoke/rollback) | ✅ | ⏳ (live capstone) | — | — | — |
+| Deployment (smoke/rollback) | ✅ | ✅ source-general (L17); live re-run deferred | — | — | — |
 
 ---
 
@@ -195,7 +195,7 @@ edges, parallel flags, and owned paths, so they are content-general by construct
 (Planning structural contract + Rubber-Duck parallelization rules + Dispatcher approval/wave logic).
 
 
-### Phase 5 — S2 live capstone (Azure + @copilot) — 🚧 IN PROGRESS
+### Phase 5 — S2 live capstone (@copilot front-half live; Azure deploy re-run deferred) — ✅ DONE
 
 **Sub-step 5a — generalize `deploy.yml` live-E2E gate (source, local-only) — ✅ DONE.**
 The last remaining S1-hardcoding in the harness lived in the live deployment gate: `deploy.yml` named the
@@ -210,10 +210,129 @@ Generalized so **no scenario constant lives in the YAML**:
 - Validated: `deploy.yml` still parses as valid YAML; the only residual `RATE_LIMIT` strings are illustrative
   comments. This satisfies L2-generalization item #4 (the deploy live-E2E gate is now feature-agnostic).
 
-**Sub-step 5b — drive the 400-validation feature LIVE (Azure + @copilot) — 🚧 next.**
+**Sub-step 5b — drive the S2 (400-validation) feature LIVE — front-half VALIDATED, deploy re-run deferred (honest scope).**
 Pre-flight liveness confirmed (2026-06-28): `agentic-sdlc-demo-live` up (PUBLIC, `master`); both Container
-Apps **Running** and serving `/healthz` → `200 {"status":"ok"}` (staging + prod). Loop-1 S1 issues intact
-(#5 intake, #6 PRD plan-approved, #11 U4, #21 KNOWN-DEFECT). Next: instantiate the generalized `deploy.yml`
-+ S2 `e2e.env` into the live repo, file the S2 intent issue, drive planning → @copilot dev-fleet → PR gates
-(the **generalized eval-rubric** scoring 400+JSON live) → merge → live deploy + the generalized E2E gate.
+Apps **Running** and serving `/healthz` → `200 {"status":"ok"}`. Loop-1 S1 issues intact.
 
+**Real feature gap found:** the live `/shorten` already returns 400+JSON for non-http(s) URLs but enforces
+**no max length** — a genuine gap for the Dev-fleet (`MAX_URL_LEN`, default 2048).
+
+**Driven live + VALIDATED (the harness front-half generalizes to a non-429 scenario):**
+- **Planning** → intake **#22** → PRD **#23** (3 units + DAG + `agentic-plan` JSON) → work-units **#24/#25/#26**.
+- **Rubber-Duck** → live `plan-lint.yml` (`on: issues`) on #23 → **PASS** (well-formed DAG, safe parallelization,
+  Units [U1,U2,U3]); correctly **skipped** non-plan intake #22. Plan-shape-general, not S1-specific.
+- **Human plan-gate** → `plan-approved` added to #23 *after* plan-lint passed (honest gate order).
+- **Dispatcher** → approved → **dispatch U1,U2; hold U3** (waits on U1); unapproved variant → **REFUSAL exit 1**.
+  Wave logic + refusal generalize to the S2 DAG.
+- **Dev-fleet (⛔ T3)** → dispatcher `--assign` → **@copilot assigned to #24 + #25** (verified). Authoring live;
+  authorship already proven in Loop 1 (PRs #12–14 merged), here re-engaged on a 400-validation feature.
+
+**Key finding — no harness defect (the live PR gates are already content-general):** the live
+`tests-and-evals.yml` output-rubric (R5) runs the 429 scorer **only** when `.agent/unit.json` declares
+`rate-limit-429`; an S2 work-unit PR declares none, so it prints "not applicable" rather than false-RED, while
+**trajectory + path-scope + unit-tests + security** are feature-agnostic and DO bite on S2. No change needed.
+
+**Deliberately deferred (recorded honestly — low marginal value, high risk):** re-running the generalized
+`eval-rubric.mjs` 400-scoring and `deploy.yml` E2E gate *inside* the live repo's CI. Both are proven
+**deterministically** (validator L13, 400+JSON oracle green) and **in source** (deploy.yml generalized,
+committed `e5c9ef6`). A full live re-run would require migrating the scenario system into the live repo —
+proving only "Actions runs node" (already shown in Loop 1) while risking the live CI/apps, violating the
+keep-S1-green / apps-healthy / no-teardown guardrails. **Harness generalization = proven; only the live
+re-execution of those two gates is skipped.** Ledger: L18.
+
+
+---
+
+## Per-agent report — Loop 2 consolidated (the "how we tested each agent" loop-memory)
+
+> Agent-first view (the matrix above is scenario-first). For **each** harness agent: **how** we stressed it
+> across S2–S5 (+ the live S2 drive), whether it **behaved as expected**, any **defect found**, and the
+> **fix applied**. This is the don't-redo-it record the human asked for. Methodology = `HARNESS_TESTING.md`.
+> Net Loop-2 outcome: **the only harness defects were the Phase-0 scenario-coupling fixes (P0-1..P0-4);
+> every agent gate was already content-general and needed ZERO edits to pass a brand-new scenario.**
+
+### 1. Planning (artifact contract + `plan-lint`)
+- **Tested how:** ran the structural plan-lint on a fresh, non-429 plan in every scenario — S2 validation
+  plan, S3 slug-helper plan, S5's sound plan + 4 malformed plans (cycle, dup-id, ordered-marked-parallel,
+  parallel-share-path); **live** on PRD issue **#23** (`plan-lint.yml on: issues`).
+- **Behaved as expected:** ✅ yes. Passed every well-formed DAG; the ordered integration unit was required to
+  be marked ordered; live #23 returned PASS and correctly **skipped** the non-plan intake #22.
+- **Defect found / fix:** none in the agent. (Phase-0 P0-2/P0-3 generalized the *validator around it* so a
+  non-429 plan could be scored at all.)
+
+### 2. Rubber-Duck (deterministic critic gate)
+- **Tested how:** S5 drove `validatePlan`'s structural detectors directly (cycle + duplicate-id throwers,
+  rule-A ordered-marked-parallel, rule-B parallel-share-path) — coverage S1 never reached; **live** plan-lint
+  comment on #23.
+- **Behaved as expected:** ✅ yes. Each malformed plan was caught by the right rule; the clean plan passed;
+  live verdict was well-formed-DAG PASS.
+- **Defect found / fix:** none. Reasons purely about ids/edges/flags/paths ⇒ content-general by construction.
+
+### 3. Orchestrator / Dispatcher (`dispatch.mjs`, `cli.mjs`)
+- **Tested how:** S5 `dispatch-positive-approved` (fan out U1–U3, hold ordered U4) + `dispatch-negative-unapproved`
+  (refuse without `plan-approved`); **live** on S2 — dispatched U1,U2 / held U3, and the unapproved variant
+  **REFUSED, exit 1**, then `--assign` put @copilot on #24 + #25 (verified by reading the issues back).
+- **Behaved as expected:** ✅ yes, on a real S2 DAG (different unit ids/paths than S1).
+- **Defect found / fix:** none this loop. (The R2 async/await-verify fix predates Loop 2; it held — assigns
+  were confirmed live.)
+
+### 4. Dev-fleet — path-scope (`path-scope` required check)
+- **Tested how:** S4 `positive-in-lane` vs `negative-stray` (strays into another unit's `src/store.ts`);
+  **live** the gate is wired on @copilot PRs **#27/#28**. Verified @copilot's `.agent/unit.json` `declaredPaths`
+  equal the exact files each PR touches (#27 = app.ts+config.ts+test+unit.json; #28 = README+unit.json).
+- **Behaved as expected:** ✅ deterministically (in-lane green, stray RED on `/healthz`) **and live by inspection**
+  — declaredPaths==touched ⇒ path-scope passes by construction on a 400-validation feature.
+- **Defect found / fix:** none.
+
+### 5. Dev-fleet — trajectory (`trajectory` required check)
+- **Tested how:** S4 `trajectory-positive` (touched declared paths + added e2e test) vs
+  `trajectory-negative-no-test` (`missing-required-test`); **live** verified @copilot's #27 declares
+  `requiredTest: test/unit/inputValidation.test.ts` and actually added that test.
+- **Behaved as expected:** ✅ deterministically **and live by inspection** — the "must add the required test"
+  contract is satisfied by @copilot's own PR on a non-429 feature.
+- **Defect found / fix:** none.
+
+### 6. Quality-Test (`eval-rubric`)
+- **Tested how:** S2 is the headline probe — a **non-429 acceptance oracle**. Ran the new
+  `request-contract.mjs` rubric: `good` (valid→201, overlong→400+JSON), `no-maxlen` (overlong stored → caught),
+  `plaintext-error` (correct **400** but non-JSON body → **still caught**, shape not just status).
+- **Behaved as expected:** ✅ yes, with sharp discrimination (the right-status/wrong-shape variant is the
+  anti-theater proof). Live `tests-and-evals.yml` is **contract-driven (R5)** — it runs the 429 scorer only if
+  `unit.json` declares `rate-limit-429`, so the S2 PR gets "not applicable" instead of a false-RED.
+- **Defect found / fix:** **Phase-0 P0-1** — `eval-rubric.mjs` had the 429 oracle baked in. **Fixed:** extracted
+  `rubrics/rate-limit.mjs`, made the runner load a `--rubric <module>` and trust its `{checks,signals,pass}`;
+  added `rubrics/request-contract.mjs` as the second oracle. This is the single most important Loop-2 fix.
+
+### 7. Security-Compliance (`pin-check` + CodeQL/dependency-review)
+- **Tested how:** S3 risky-dependency — a **different** dep set than S1: `positive-pinned-slug` (nanoid + lockfile),
+  `negative-slopsquat-slug` (`uuidd` typo + `slugify:latest` + git-source), `negative-unpinned` (legit names,
+  caret ranges, no lockfile — pinning hygiene alone).
+- **Behaved as expected:** ✅ yes — two distinct negative paths, neither S1-specific (generic well-known/denylist
+  + Levenshtein-1 + spec-classification).
+- **Defect found / fix:** none.
+
+### 8. Code-Review (`doc-coupling` advisory + CODEOWNERS)
+- **Tested how:** S4 `positive-docs-updated` vs `negative-missing-docs` — an arch change to `app.ts`/`health.ts`
+  with no doc update on a `/healthz` feature (nothing to do with rate limiting).
+- **Behaved as expected:** ✅ yes — the arch-glob fired on non-429 content and flagged the missing doc.
+- **Defect found / fix:** none.
+
+### 9. Deployment (`smoke-check` + rollback + live-E2E gate)
+- **Tested how:** S1 proved both rollback variants live (staging-fail + prod-canary-fail) in Loop 1. Loop 2's
+  job was **generalizing the live-E2E gate** so it is not S1-file-hardcoded.
+- **Behaved as expected:** ✅ as **source** — `deploy.yml` now discovers `test/e2e/*.e2e.test.ts` + sources an
+  optional scenario `test/e2e/e2e.env` (no threshold constant in the YAML); anti-theater skip-guard retained.
+- **Defect found / fix:** **Phase-5a** — removed the hardcoded `rateLimit.e2e.test.ts` filename + `RATE_LIMIT_MAX`
+  workflow constant. **Honesty flag:** generalized gate is proven deterministically (L17) + committed in source
+  (`e5c9ef6`); it was **deliberately not re-run inside live CI** this session (rationale: L18 / Phase-5b) — must
+  be stated as "source-general, live re-run deferred," not "fully validated live."
+
+### Loop-2 bottom line (for the next loop)
+- **Harness defects = 4, all in Phase 0** (the scenario-axis refactor: P0-1 eval oracle, P0-2 validator driver,
+  P0-3 fixture layout, P0-4 contract doc). After that, **S2/S3/S4/S5 each ran with ZERO gate edits** — the
+  per-agent gates were already content-general; the mono-scenario coupling lived only in the *plumbing*.
+- **Regression guard never broke:** 19→23→27→33→40 fixtures, S1 green throughout.
+- **Do-not-redo:** don't re-add 429 logic to `eval-rubric.mjs`/`run.mjs` (it's rubric-driven now); a new
+  scenario = a new `scenarios/<id>/` folder + (if a new acceptance *kind*) one rubric module, never a gate edit.
+- **Still open (honest):** live re-run of the generalized eval-rubric (400) + deploy E2E *inside* the live repo
+  CI; independent human PR-reviewer needs a 2nd identity at demo time (solo repo).
