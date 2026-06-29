@@ -40,7 +40,7 @@ Each stage is a "functionality in the repo" the presenter can jump to independen
 - [ ] **Fallback plan** — pre-baked branch / pre-recorded output if a live agent run stalls on stage
 - [x] **Story & talking points** — the "why agentic SDLC" narrative for the audience *(delivered as the reusable asset below)*
 - [x] **Reusable "Agentic Engineering on GitHub" asset** — client-agnostic narrative + reference harness under `docs/agentic-engineering-on-github/` (the Story; Agents + Skills + Harness; the GitHub-powered pipeline in fleet mode; drop-in example `harness/`)
-- [x] **Tier-1 runnable demo backbone** — `demos/` executes offline: sample app + 6-agent harness + dispatcher + 19-fixture validation matrix (`demos/validate/run.mjs`, 10/10 negatives caught) + presenter guide (`demos/DEMO_SCRIPT.md`). Tiers 2 (enforced GitHub repo) and 3 (live `@copilot` fleet) remain human-gated.
+- [x] **Tier-1 runnable demo backbone** — `demos/` executes offline: sample app + 6-agent harness + dispatcher + 74-fixture validation matrix (`demos/validate/run.mjs`, 45/45 negatives caught) + presenter guide (`demos/DEMO_SCRIPT.md`). Tiers 2 (enforced GitHub repo) and 3 (live `@copilot` fleet) remain human-gated.
 
 ## How to Verify
 
