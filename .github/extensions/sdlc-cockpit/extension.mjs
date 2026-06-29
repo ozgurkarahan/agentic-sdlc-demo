@@ -40,6 +40,63 @@ const session = await joinSession({
             },
             actions: [
                 {
+                    name: "cockpit_fleet",
+                    description: "Push the current live fleet state into the cockpit so the panel shows each agent/work-unit's stage, status, and gate.",
+                    inputSchema: {
+                        type: "object",
+                        additionalProperties: false,
+                        required: ["goal", "iteration", "units"],
+                        properties: {
+                            goal: {
+                                type: "string",
+                                description: "The current loop goal.",
+                            },
+                            iteration: {
+                                type: "number",
+                                description: "Current loop iteration number.",
+                            },
+                            units: {
+                                type: "array",
+                                items: {
+                                    type: "object",
+                                    additionalProperties: false,
+                                    required: ["id", "agent", "title", "branch", "stage", "status", "gate"],
+                                    properties: {
+                                        id: { type: "string" },
+                                        agent: { type: "string" },
+                                        title: { type: "string" },
+                                        branch: { type: "string" },
+                                        stage: {
+                                            type: "string",
+                                            enum: ["intake", "plan", "implement", "test", "review", "pr", "deploy"],
+                                        },
+                                        status: {
+                                            type: "string",
+                                            enum: ["pending", "running", "done", "blocked"],
+                                        },
+                                        gate: {
+                                            type: "string",
+                                            enum: ["pending", "pass", "caught", "na"],
+                                        },
+                                    },
+                                },
+                            },
+                            loop: {
+                                type: "object",
+                                additionalProperties: false,
+                                properties: {
+                                    lastVerdict: { type: "string" },
+                                    action: { type: "string" },
+                                },
+                            },
+                        },
+                    },
+                    handler: async (ctx) => {
+                        const s = get(ctx.instanceId).setFleet(ctx.input);
+                        return { ok: true, fleet: s.fleet };
+                    },
+                },
+                {
                     name: "cockpit_run",
                     description: "Run the demo gates LIVE via `demos/validate/run.mjs --json` and stream results into the cockpit. Optionally pass a single agent to run just that stage's gate.",
                     inputSchema: {
