@@ -2,7 +2,7 @@
 
 ## Overview
 
-A ready-to-run, **presenter-led demo environment** that showcases the full software development lifecycle driven by AI coding agents. The demo starts from a real-world *input* — a new requirement, meeting notes, or an action item — and walks an audience through the entire lifecycle with agents: requirements analysis → planning & design → implementation → testing → code review → pull request → deployment & docs. Each stage is a self-contained "functionality" that can be demoed independently or chained into one continuous end-to-end story. This is a **customer-facing showcase, not a hands-on lab**: the presenter (Ozgur) drives, the audience watches the agentic workflow in action.
+A ready-to-run, **presenter-led demo environment** that showcases the full software development lifecycle driven by AI coding agents. The demo starts from a real-world *input* — a new requirement, meeting notes, or an action item — and walks an audience through the entire lifecycle with agents: requirements analysis → planning & design → implementation → testing → code review → pull request → deployment & docs. Each stage is a self-contained "functionality" that can be demoed independently or chained into one continuous end-to-end story. This is a **customer-facing showcase, not a hands-on lab**: the presenter drives, the audience watches the agentic workflow in action.
 
 ## Engagement Details
 
@@ -12,7 +12,7 @@ A ready-to-run, **presenter-led demo environment** that showcases the full softw
 | Topic | Agentic Software Development Lifecycle |
 | Format | Demo (presenter-led, customer-facing) |
 | Audience | Customer technical leadership + technical stakeholders; reusable across audiences |
-| Status | **Demo-ready (effective A-).** Reusable asset + runnable `demos/` (74/74 fixtures, 45 neg, S1–S6, 8 agents) + one-command from-scratch test (`demos/e2e-from-scratch.ps1`). **Live closed loop PROVEN** on `ozkara-ms/agentic-sdlc-demo-live` (Sweden Central, sub-2): @copilot dispatch → gates → staging→prod deploy + rollback, prod `/healthz` 200, with TEST-MODE delegated prod-approval. Both repos migrated to the unlimited `ozkara-ms` org. Open: bug #21 (limiter behind ACA ingress), B1 observability/SRE, B6 doc-steward workflow. |
+| Status | **Demo-ready (effective A-).** Reusable asset + runnable `demos/` (74/74 fixtures, 45 neg, S1–S6, 8 agents) + one-command from-scratch test (kept local in gitignored `_internal/`). **Live closed loop PROVEN** on `<your-org>/agentic-sdlc-demo-live` (Sweden Central, sub-2): @copilot dispatch → gates → staging→prod deploy + rollback, prod `/healthz` 200, with TEST-MODE delegated prod-approval. Both repos live in a GitHub org without Actions free-tier limits. Open: bug #21 (limiter behind ACA ingress), B1 observability/SRE, B6 doc-steward workflow. |
 
 ## Demo Concept
 
@@ -78,7 +78,7 @@ node demos/validate/run.mjs --filter security-compliance   # one agent's positiv
 node demos/orchestrator/cli.mjs --plan demos/orchestrator/example-plan.json   # dispatcher fan-out
 # Presenter golden path (stage → command → artifact → negative caught): demos/DEMO_SCRIPT.md
 # How we test + improve the harness (the repeatable protocol):          demos/HARNESS_TESTING.md
-# Loop-memory: what each scenario tested / broke / fixed (agent×scenario): demos/HARNESS_CHANGELOG.md
+# Loop-memory + session handoffs (local-only, gitignored):                _internal/demos/
 # Entry point + tier map + honesty labels:                              demos/README.md
 ```
 
@@ -86,7 +86,7 @@ node demos/orchestrator/cli.mjs --plan demos/orchestrator/example-plan.json   # 
 
 | Path | Description |
 |------|-------------|
-| `demos/` | Runnable demo: `sample-app/` (system under test) · `orchestrator/` (dispatcher) · `ci/scripts/` + `ci/workflows/` (real verification) · `scenarios/<id>/` (per-scenario manifest+rubric+variants+fixtures — scenario axis) · `validate/run.mjs` (gate matrix, `--scenario`) · `CONTRACT.md` (keystone, §10 = scenario axis) · `HARNESS_TESTING.md` (how we test+improve the harness) · `HARNESS_CHANGELOG.md` (loop-memory) · `DEMO_SCRIPT.md` (presenter golden path) · `README.md` (entry point). The 7 enriched agent personas + `AGENTS.md` live single-source in the asset `harness/` (below); `demos/agents/` is just a pointer. |
+| `demos/` | Runnable demo: `sample-app/` (system under test) · `orchestrator/` (dispatcher) · `ci/scripts/` + `ci/workflows/` (real verification) · `scenarios/<id>/` (per-scenario manifest+rubric+variants+fixtures — scenario axis) · `validate/run.mjs` (gate matrix, `--scenario`) · `CONTRACT.md` (keystone, §10 = scenario axis) · `HARNESS_TESTING.md` (how we test+improve the harness) · `DEMO_SCRIPT.md` (presenter golden path) · `README.md` (entry point). The 7 enriched agent personas + `AGENTS.md` live single-source in the asset `harness/` (below); `demos/agents/` is just a pointer. |
 | `docs/agentic-engineering-on-github/` | Reusable white-label asset: the Story + Agents/Skills/Harness + GitHub pipeline + drop-in `harness/` examples |
 | `docs/` | Talking points, setup, fallback plan, the narrative |
 | `inputs/` *(add in first session)* | Seed artifacts: sample requirement / meeting notes / action item |
@@ -104,22 +104,22 @@ To be defined with the sample app in the first session (e.g. `azd up`, GitHub Ac
 
 ## Workflow Rules
 
-Read `~/projects/memory/agent-config/workflow.md` for the full set of global workflow rules. Key rules summarized here:
+Key workflow rules:
 
 1. **Plan Before Coding** — For any task with 3+ steps, outline the approach first. Get approval before implementing.
 2. **Verify Before Done** — Never mark a task complete without proving it works. Run the checks in **How to Verify** above; if that section is still empty or stale, updating it is part of the current task.
 3. **No Blind Retries** — Diagnose root cause on failure. Don't retry non-transient errors.
 4. **Keep It Simple** — Don't add features, refactor code, or make improvements beyond what was asked.
-5. **Wiki-First Memory** — Durable lessons live in `~/projects/memory/wiki/`, NOT in per-project `.ai/` folders (deprecated 2026-04-22).
+5. **Wiki-First Memory** — Durable lessons live in your team's knowledge base / wiki, NOT in per-project `.ai/` folders.
 
-## Standing design constraints (Ozgur, 2026-06-28 — apply to ALL designs)
+## Standing design constraints (apply to ALL designs)
 
-- **Azure = internal subscription; cost is NOT a constraint.** Never gate, shrink, or simplify a design to save spend — prefer the *correct* architecture. (Full note: `~/projects/memory/agent-config/platform.md`.)
+- **Azure = internal subscription; cost is NOT a constraint.** Never gate, shrink, or simplify a design to save spend — prefer the *correct* architecture.
 - **Destined for PUBLIC-INTERNET publication** (a Microsoft solution). Design for public consumption: secretless posture (OIDC + managed identity), LICENSE, reproducible clean-clone setup, no internal-only assumptions, presentable docs.
 
 ## Platform & Environment
 
-Read `~/projects/memory/agent-config/platform.md` for full platform preferences. Common reminders:
+Platform reminders:
 
 - Windows 11 + PowerShell, Python 3.12 (use `python` not `python3`)
 - ARM64 dev machines: avoid native-extension wheels that lack arm64 builds (e.g. `uvicorn[standard]` → `httptools`)
@@ -130,18 +130,17 @@ Read `~/projects/memory/agent-config/platform.md` for full platform preferences.
 
 | Document | Contents |
 |----------|----------|
-| `~/projects/memory/wiki/projects/agentic-sdlc-demo.md` | Canonical project memory page |
-| `~/projects/memory/wiki/projects/skywise-ai-app-factory.md` | Adjacent: Cyril's Airbus/Skywise end-to-end SDLC automation demo proposal |
-| `~/projects/memory/wiki/domains/github-copilot-agentic-devops.md` | GitHub Copilot as governed Agentic DevOps platform |
-| `~/projects/memory/wiki/projects/big-bets-fy26-ozgur.md` | Where this demo can land as an FY26 Big Bet |
-| `~/projects/memory/glossary.md` | Canonical terms: Agentic DevOps, Agentic Development Cycle (ADC), Four Waves of AI SDLC |
+| `docs/agentic-engineering-on-github/` | Reusable "Agentic Engineering on GitHub" asset: the Story, Agents/Skills/Harness, GitHub pipeline, drop-in `harness/` |
+| `demos/CONTRACT.md` | The keystone contract for the runnable harness (gates, scenario axis) |
+| `demos/DEMO_SCRIPT.md` | Presenter golden path: stage → command → artifact → negative caught |
+| `demos/README.md` | Runnable demo entry point + tier map + honesty labels |
 
 ## First Session Instructions
 
 When the agent is first launched in this project:
 
 1. **Read all existing files** to understand the current state.
-2. **Research the topic** — the latest agentic-SDLC capabilities and demoable surfaces: GitHub Copilot CLI + coding agent + PR review, Claude Code, GitHub Actions, Azure deploy. Cross-reference the memory wiki: `github-copilot-agentic-devops`, `skywise-ai-app-factory`, the ADC (Agentic Development Cycle), and the Four Waves of AI SDLC.
+2. **Research the topic** — the latest agentic-SDLC capabilities and demoable surfaces: GitHub Copilot CLI + coding agent + PR review, Claude Code, GitHub Actions, Azure deploy. Cross-reference current best practices for the Agentic Development Cycle (ADC) and the agentic SDLC.
 3. **Enter plan mode** and propose:
    - The **sample app** to build/evolve (small but real enough to exercise all 7 stages)
    - The **input→lifecycle story** and the three seed inputs (requirement / meeting notes / action item)
@@ -154,7 +153,7 @@ When the agent is first launched in this project:
 
 - Do not turn this into a hands-on lab — it is presenter-led; the audience watches the agent work.
 - Do not start building the sample app before the plan is approved (Step 4 above).
-- Do not create `.ai/lessons-learned.md` or `.ai/project-reference.md` — that pattern was deprecated 2026-04-22. Project knowledge lives directly on the wiki page.
+- Do not create `.ai/lessons-learned.md` or `.ai/project-reference.md`. Durable project knowledge belongs in your team wiki, not in per-project `.ai/` files.
 - Do not commit `.env` or any secret-bearing files (already in `.gitignore`).
 - Do not add comments, docstrings, or type annotations to code you didn't change.
 - Do not over-engineer the sample app — it exists to showcase the workflow, not to be a product.

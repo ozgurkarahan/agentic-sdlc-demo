@@ -13,14 +13,13 @@ When the user says "end session", "wrap up", or "done for today":
    - `.claude/CLAUDE.md` (Project Context block — bump iteration status)
    - Project-specific files (`PLAN.md` if present, `agent.yaml` for hosted agents, etc.)
 
-3. **Wiki compounding** — If significant findings emerged today, route them to the **memory wiki** (NOT to a project-local `.ai/` folder — that pattern was deprecated 2026-04-22):
-   - **Recurring failure mode found** → ingest as `~/projects/memory/wiki/lessons/<slug>.md` (or update existing lesson if it sharpens a claim)
-   - **Useful pattern emerged** → ingest as `~/projects/memory/wiki/patterns/<slug>.md`
-   - **Domain knowledge refined** → update `~/projects/memory/wiki/domains/<domain>.md`
-   - **Glossary terms added** → `~/projects/memory/glossary.md`
-   - **Project page exists?** → update `~/projects/memory/wiki/projects/{this-project}.md` with status / decisions / open actions
-   - **Project page does NOT exist yet?** → ingest the project as `~/projects/memory/wiki/projects/{this-project}.md` once the project has produced something durable
-   - **Always** → append a one-line entry to `~/projects/memory/log.md` and emit an `~/projects/memory/ops/activity.jsonl` event for the active week
+3. **Wiki compounding** — If significant findings emerged today, route them to your team's knowledge base / wiki (NOT to a project-local `.ai/` folder):
+   - **Recurring failure mode found** → capture it as a lesson (or sharpen an existing one)
+   - **Useful pattern emerged** → capture it as a reusable pattern
+   - **Domain knowledge refined** → update the relevant domain page
+   - **Glossary terms added** → update your shared glossary
+   - **Project page** → update the project's wiki page with status / decisions / open actions (create it once the project has produced something durable)
+   - **Always** → append a one-line entry to your project changelog / log
 
 4. **Git check** — Run `git status`. If there are uncommitted changes, list them. If the project is not yet a git repo:
    - `git init`

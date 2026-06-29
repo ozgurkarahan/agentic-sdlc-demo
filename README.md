@@ -25,14 +25,12 @@ Scaffolded 2026-06-18 from `project-template`. Not started — the first working
 ## Getting started
 
 ```pwsh
-# From the memory orchestrator, launch the project with your preferred agent:
-~/projects/memory/scripts/launch-copilot.ps1 ~\projects\agentic-sdlc-demo
-# or
-~/projects/memory/scripts/launch-claude.ps1 ~\projects\agentic-sdlc-demo
+git clone https://github.com/<your-org>/agentic-sdlc-demo.git
+cd agentic-sdlc-demo
 ```
 
-On first launch, ask the agent to research agentic-SDLC capabilities and propose the demo plan before building anything.
+Open the repo with your preferred AI coding agent (for example GitHub Copilot CLI or Claude Code). On first launch, ask the agent to research agentic-SDLC capabilities and propose the demo plan before building anything.
 
 ## Reference
 
-Durable project knowledge lives on the memory wiki: `~/projects/memory/wiki/projects/agentic-sdlc-demo.md`.
+Project overview, demo concept, and how-to-verify live in `AGENT.md`.

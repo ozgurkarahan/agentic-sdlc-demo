@@ -29,7 +29,7 @@ Take the integrated, merged change to `{{DEPLOY_TARGET}}` safely and report a tr
 ## Guardrails (never do)
 - Never deploy on a red gate or an unapproved release.
 - **Never report go on a red Actions run even if `/healthz` is green** (the Loop-3 fix: the old gate
-  was blind to run status — see `demos/HARNESS_CHANGELOG.md` Loop-3 / gaps G1–G3).
+  was blind to run status — the Loop-3 run-status gate closed gaps G1–G3).
 - Never skip smoke tests; never disable rollback.
 - Never deploy outside the Environment's protection rules (required reviewers / wait timers).
 
