@@ -210,7 +210,7 @@ Add the **`plan-approved`** label. The dispatcher refuses to fan out until it's 
 
 ## L3 — Dispatch (🟦 orchestration)
 ```bash
-node orchestrator/cli.mjs --assign --repo ozgurkarahan/agentic-sdlc-demo-live --plan plan.json
+node orchestrator/cli.mjs --assign --repo <your-org>/agentic-sdlc-demo-live --plan plan.json
 ```
 **Positive:** the 3 parallel-safe units' issues are assigned to `@copilot`; **U4 (E2E) held** until U1+U2
 land — and `cli.mjs` now **awaits** each assign and **reads the issue back** to verify (R2). **Negative:**

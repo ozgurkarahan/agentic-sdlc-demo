@@ -17,7 +17,7 @@ The Deployment gate is **not** one uniform "blocks". It is a split:
 Claiming Azure or the smoke as "native GitHub enforcement" would re-introduce the exact overclaim this
 whole asset corrects. Keep the split.
 
-## What gets created (subscription 2, Sweden Central)
+## What gets created (Sweden Central)
 ```
 rg-agentic-sdlc-demo                resource group
 log-agentic-sdlc                    Log Analytics workspace (ACA requires one)
@@ -42,7 +42,7 @@ agentic-sdlc-demo-gha               Entra app reg + OIDC federated creds (env-sc
 ## Run
 ```powershell
 # Stand up everything (idempotent — safe to re-run):
-./provision.ps1 -Repo 'ozgurkarahan/agentic-sdlc-demo-live'
+./provision.ps1 -Repo '<your-org>/agentic-sdlc-demo-live'
 
 # Provision Azure before the repo exists, then set variables later:
 ./provision.ps1 -SkipRepoVariables

@@ -22,7 +22,7 @@ Gather information from ALL the sources below, then produce a single structured 
 ### 2. Project History — What We've Done
 
 - Read `AGENT.md` for project overview and objectives
-- Read `~/projects/memory/wiki/projects/agentic-sdlc-demo.md` if it exists (durable wiki page)
+- Read the project's durable wiki / knowledge page if your team maintains one
 - Read auto-memory files (`.claude/` project memory or `MEMORY.md`) for session history
 - Summarize git log: total commits, contributors, major milestones
 - Run: `git log --oneline --since="2 weeks ago"` for recent activity

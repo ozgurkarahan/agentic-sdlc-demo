@@ -3,10 +3,10 @@
 > Entry point. The keystone is **[`CONTRACT.md`](./CONTRACT.md)** — read it first. The presenter's
 > step-by-step golden path is **[`DEMO_SCRIPT.md`](./DEMO_SCRIPT.md)**.
 >
-> **Loop docs:** [`HARNESS_TESTING.md`](./HARNESS_TESTING.md) (how we test+improve the harness) ·
-> [`HARNESS_CHANGELOG.md`](./HARNESS_CHANGELOG.md) (loop memory) ·
-> [`HARNESS_BACKLOG.md`](./HARNESS_BACKLOG.md) (deferred work) ·
-> [`LOOP3.md`](./LOOP3.md) (current loop — durable handoff).
+> **Loop docs:** [`HARNESS_TESTING.md`](./HARNESS_TESTING.md) is the published, repeatable
+> test-and-improve methodology. The session-specific loop-memory (`HARNESS_CHANGELOG.md`),
+> deferred work (`HARNESS_BACKLOG.md`), and durable session handoffs (`LOOPn.md`) are kept
+> **local-only** in the gitignored `_internal/demos/` folder — not published.
 
 ## What this is
 
@@ -65,7 +65,7 @@ demos/
 
   fixtures/<agent>/   # seeded positive + adversarial-negative inputs per agent (CONTRACT §4 schema)
   validate/run.mjs    # Tier-1 runner: drives each fixture through its gate, asserts pass/catch
-  evidence/           # (T3) captured runs / pre-recorded fallback
+  # evidence/ (T3 captured runs / pre-recorded fallback) is now local-only → _internal/demos/evidence/
 ```
 
 ## The one story (frozen)

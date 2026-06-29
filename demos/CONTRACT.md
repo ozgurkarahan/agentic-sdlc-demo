@@ -53,7 +53,7 @@ demos/
   scenarios/             # (Loop 2) self-contained scenario folders — see §10. SUPERSEDES the flat fixtures/ below.
     <id>/                #   scenario.json (manifest+oracle decl) · rubric.mjs · variants/ · fixtures/<agent>/<case>.json
   validate/              # D5 — Tier-1 deterministic validation runner (scenario-aware; `--scenario <id>`)
-  evidence/              # T3 — pre-recorded fallback evidence (populated at D8)
+  # evidence/ (T3 captured runs / pre-recorded fallback) is now local-only → _internal/demos/evidence/
 ```
 > **Loop-2 note:** D5 originally placed fixtures flat at `demos/fixtures/<agent>/`. Loop 2 introduced a
 > **scenario axis** — fixtures now live under `demos/scenarios/<id>/fixtures/<agent>/` and S1 migrated to
@@ -166,7 +166,7 @@ unavailable.**
 > validator or the oracle. **This is additive: the frozen S1 story (§2) and fixture schema (§4) are
 > unchanged — only the on-disk layout and the oracle's location generalized.** The methodology that
 > governs how we add + validate scenarios is `demos/HARNESS_TESTING.md`; the loop-memory of what each
-> scenario tested/broke/fixed is `demos/HARNESS_CHANGELOG.md`.
+> scenario tested/broke/fixed is kept local-only in `_internal/demos/HARNESS_CHANGELOG.md` (gitignored).
 
 **A scenario is one self-contained folder:**
 ```

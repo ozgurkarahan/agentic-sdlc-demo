@@ -36,10 +36,10 @@ block the very push that would create the workflows. So the order is fixed:
 ## Usage
 ```powershell
 # dry-run first (prints every gh api call, mutates nothing):
-pwsh ./enforce-protections.ps1 -Repo ozgurkarahan/agentic-sdlc-demo-live -Reviewer ozgurkarahan -DryRun
+pwsh ./enforce-protections.ps1 -Repo <your-org>/agentic-sdlc-demo-live -Reviewer <your-username> -DryRun
 
 # apply (after the workflows have run once so the names registered):
-pwsh ./enforce-protections.ps1 -Repo ozgurkarahan/agentic-sdlc-demo-live -Reviewer ozgurkarahan
+pwsh ./enforce-protections.ps1 -Repo <your-org>/agentic-sdlc-demo-live -Reviewer <your-username>
 
 # also try a merge queue (auto-degrades + warns if unavailable):
 pwsh ./enforce-protections.ps1 -Repo ... -Reviewer ... -WithMergeQueue

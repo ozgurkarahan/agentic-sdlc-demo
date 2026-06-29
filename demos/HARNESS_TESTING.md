@@ -3,8 +3,9 @@
 > **Why this file exists (human directive, 2026-06-28):** *"Test ALL agents and see what to improve — let
 > the harness DO things and check whether the result is what we expected. Write down what was fixed/changed
 > so the loop remembers and doesn't redo it. Document this way-of-testing so we remember how we tested &
-> improved the harness."* This file is the **repeatable methodology**; `HARNESS_CHANGELOG.md` is the
-> **loop-memory** (what each scenario tested / broke / fixed, agent by agent).
+> improved the harness."* This file is the **repeatable methodology** (published); the
+> **loop-memory** (what each scenario tested / broke / fixed, agent by agent) is kept local-only in
+> `_internal/demos/HARNESS_CHANGELOG.md` (gitignored).
 
 The harness is the set of deterministic gates under `demos/` that govern the agentic SDLC pipeline
 (planning, rubber-duck, dispatcher, dev-fleet, quality-test, security, code-review, deployment,
@@ -34,7 +35,7 @@ shared harness code, that coupling *is the defect to fix*. See `CONTRACT.md` §1
 | **4. Run** | `node demos/validate/run.mjs --scenario <id>`. | pass/blocked per fixture |
 | **5. Classify** | For each result decide: **expected-catch** (gate bit correctly = GOOD) vs **harness-defect** (S1-coupling, theater = false-green, or false-block). | a verdict per fixture |
 | **6. Fix** | For each harness-defect: fix the gate so it is **scenario-general** (read the scenario's own oracle/manifest, not an S1 literal). **≤3 fix→re-run attempts per gate**, then record it KNOWN-DEFECT and move on. | a harness edit + a re-run |
-| **7. Record** | Append to `HARNESS_CHANGELOG.md`: agent × scenario — tested? behaved-as-expected? defect found? fix applied? Append `L13+` to the session ledger `files/validation-log.md`. | loop-memory updated |
+| **7. Record** | Append to `_internal/demos/HARNESS_CHANGELOG.md` (local-only loop-memory): agent × scenario — tested? behaved-as-expected? defect found? fix applied? | loop-memory updated |
 
 **Regression guard (non-negotiable):** after ANY harness edit, re-run `node demos/validate/run.mjs`
 (all scenarios) and confirm the full matrix is **74/74, 45/45 negatives caught, exit 0** and S1 stays
@@ -120,7 +121,7 @@ fixtures are the harness's conscience.
 - **Keep S1 green** after every refactor (the regression guard).
 - The **source repo `agentic-sdlc-demo` stays local-only** (commit, do not push) unless explicitly asked.
 - A **live capstone** keeps both Azure apps live + healthy (no teardown); verify live outcomes out-of-band.
-- **Deferred work goes to [`HARNESS_BACKLOG.md`](./HARNESS_BACKLOG.md)** (the discussion home), not silently dropped; the **current loop's durable handoff** is [`LOOP3.md`](./LOOP3.md) (so a fresh session resumes with zero loss).
+- **Deferred work + durable session handoffs are kept local-only** in the gitignored `_internal/demos/` folder (`HARNESS_BACKLOG.md`, `LOOPn.md` handoffs), not silently dropped — so a fresh local session resumes with zero loss.
 
 ---
 

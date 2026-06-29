@@ -34,6 +34,10 @@ Desktop.ini
 # Tasks (internal session tracking)
 tasks/
 
+# Local-only harness loop-memory, session handoffs & test scripts
+# (kept on disk for running the improvement loop; NOT published to the public repo)
+_internal/
+
 # Common language ignores (uncomment as needed per project)
 # Python
 # __pycache__/
