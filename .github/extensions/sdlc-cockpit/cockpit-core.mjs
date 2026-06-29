@@ -136,6 +136,49 @@ function runValidator(agent) {
 }
 
 const keyOf = (r) => `${r.agent}/${r.case}`;
+const FLEET_STAGES = new Set(["intake", "plan", "implement", "test", "review", "pr", "deploy"]);
+const FLEET_STATUSES = new Set(["pending", "running", "done", "blocked"]);
+const FLEET_GATES = new Set(["pending", "pass", "caught", "na"]);
+
+function requireString(v, path) {
+  if (typeof v !== "string") throw new Error(`cockpit_fleet.${path} must be a string`);
+  return v;
+}
+
+function requireEnum(v, allowed, path) {
+  const s = requireString(v, path);
+  if (!allowed.has(s)) throw new Error(`cockpit_fleet.${path} has unsupported value '${s}'`);
+  return s;
+}
+
+function normalizeFleet(input) {
+  if (!input || typeof input !== "object" || Array.isArray(input)) throw new Error("cockpit_fleet input must be an object");
+  if (!Number.isFinite(input.iteration)) throw new Error("cockpit_fleet.iteration must be a number");
+  if (!Array.isArray(input.units)) throw new Error("cockpit_fleet.units must be an array");
+  const fleet = {
+    goal: requireString(input.goal, "goal"),
+    iteration: input.iteration,
+    units: input.units.map((u, i) => {
+      if (!u || typeof u !== "object" || Array.isArray(u)) throw new Error(`cockpit_fleet.units[${i}] must be an object`);
+      return {
+        id: requireString(u.id, `units[${i}].id`),
+        agent: requireString(u.agent, `units[${i}].agent`),
+        title: requireString(u.title, `units[${i}].title`),
+        branch: requireString(u.branch, `units[${i}].branch`),
+        stage: requireEnum(u.stage, FLEET_STAGES, `units[${i}].stage`),
+        status: requireEnum(u.status, FLEET_STATUSES, `units[${i}].status`),
+        gate: requireEnum(u.gate, FLEET_GATES, `units[${i}].gate`),
+      };
+    }),
+  };
+  if (input.loop !== undefined) {
+    if (!input.loop || typeof input.loop !== "object" || Array.isArray(input.loop)) throw new Error("cockpit_fleet.loop must be an object");
+    fleet.loop = {};
+    if (input.loop.lastVerdict !== undefined) fleet.loop.lastVerdict = requireString(input.loop.lastVerdict, "loop.lastVerdict");
+    if (input.loop.action !== undefined) fleet.loop.action = requireString(input.loop.action, "loop.action");
+  }
+  return fleet;
+}
 
 export function createCockpit(instanceId) {
   const byKey = new Map();
@@ -145,6 +188,7 @@ export function createCockpit(instanceId) {
   let lastRunAt = null;
   let error = null;
   let focus = null;
+  let fleet = null;
 
   function summarize(values) {
     const total = values.length;
@@ -166,6 +210,7 @@ export function createCockpit(instanceId) {
       running: { all: runningAll, agents: [...runningAgents] },
       results, summary: summarize(results),
       lastRunAt, error, focus,
+      fleet,
       meta: { validatorPresent: existsSync(VALIDATOR), root: ROOT },
     };
   }
@@ -195,11 +240,16 @@ export function createCockpit(instanceId) {
 
   function reset() {
     byKey.clear(); runningAgents.clear(); runningAll = false;
-    mode = "idle"; error = null; lastRunAt = null; focus = null;
+    mode = "idle"; error = null; lastRunAt = null; focus = null; fleet = null;
     return publicState();
   }
 
   function setFocus(stage) { focus = stage || null; return publicState(); }
+
+  function setFleet(input) {
+    fleet = normalizeFleet(input);
+    return publicState();
+  }
 
   // ── HTTP server (loopback, ephemeral port) ──────────────────────────────────────
   function handle(req, res) {
@@ -245,7 +295,7 @@ export function createCockpit(instanceId) {
   return {
     instanceId,
     start, stop,
-    run, replay, reset, setFocus,
+    run, replay, reset, setFocus, setFleet,
     get url() { return url; },
     get state() { return publicState(); },
   };
