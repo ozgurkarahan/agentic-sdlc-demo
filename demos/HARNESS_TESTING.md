@@ -37,7 +37,7 @@ shared harness code, that coupling *is the defect to fix*. See `CONTRACT.md` §1
 | **7. Record** | Append to `HARNESS_CHANGELOG.md`: agent × scenario — tested? behaved-as-expected? defect found? fix applied? Append `L13+` to the session ledger `files/validation-log.md`. | loop-memory updated |
 
 **Regression guard (non-negotiable):** after ANY harness edit, re-run `node demos/validate/run.mjs`
-(all scenarios) and confirm the full matrix is **69/69, 42/42 negatives caught, exit 0** and S1 stays
+(all scenarios) and confirm the full matrix is **74/74, 45/45 negatives caught, exit 0** and S1 stays
 green. A generalization that breaks an existing scenario is not done. (Run-status gate is scenario-general:
 S1–S5 all carry workflow-conclusion fixtures; delegated-approver carries 10 refusal negatives.)
 
@@ -132,3 +132,4 @@ node demos/validate/run.mjs --scenario s1   # one scenario (full id or short pre
 node demos/validate/run.mjs --json          # machine-readable summary {total,passed,failed,...}
 ```
 Exit codes: `0` all-correct · `1` a fixture behaved wrong · `2` no fixtures matched the filter.
+

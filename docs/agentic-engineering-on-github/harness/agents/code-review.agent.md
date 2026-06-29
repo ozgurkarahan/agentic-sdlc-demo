@@ -29,3 +29,6 @@ Catch quality and architecture issues before a human reviewer spends attention, 
 
 ## Skills
 - Review heuristics + architecture-impact rules → repo `AGENTS.md` + `[architecture docs path]`.
+
+## Doc-steward (folded in, SME consortium 2026-06-29)
+- On schedule/PR: run `node demos/ci/scripts/doc-lint.mjs` — counts fixtures/scenarios vs README/AGENT.md/HARNESS_TESTING; opens a doc-drift issue on mismatch. Advisory 🟨, never blocks. (Not a 9th agent.)

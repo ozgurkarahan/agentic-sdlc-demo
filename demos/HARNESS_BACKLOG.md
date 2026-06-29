@@ -80,3 +80,24 @@ Loop-3 (M5) annotated only the **new** run-status gate (`CONTRACT.md` §11). Ext
 "does this survive a 2× smarter model?" pass to every gate (plan-lint, path-scope, trajectory,
 eval-rubric, pin-check, doc-coupling, smoke, dispatch) and record the verdict + rationale per gate.
 This is both a design-hygiene artifact and a demo talk-track.
+
+## B5 — Full from-scratch E2E test (human ask, 2026-06-29) 🅿️
+
+A single runnable artifact that validates the WHOLE harness end-to-end from nothing: assemble a fresh
+public repo from `assemble-live-repo.ps1`, provision Azure (`provision.ps1`), run all scenarios S1–S6
+through the validator, dispatch a real @copilot unit, auto-approve gates (test-mode), live staging→prod
+deploy + rollback + harness E2E, then a clean report. Goal: `pwsh demos/e2e-from-scratch.ps1` reproduces
+the entire demo on a clean environment for a presenter dry-run. Builds on `demos/LOOP3.md`/`LOOP4.md`.
+
+## B6 — Scheduled documentation-steward agent 🅿️
+
+**Why (human ask, 2026-06-29):** today there is NO agent that regularly checks project docs. AGENT.md /
+CONTRACT.md / README / fixture counts drift from the code (e.g. the 19→49→69→74 fixture-count edits were
+manual). Add a **doc-steward**: a `*.agent.md` persona + a weekly scheduled workflow that diffs docs vs
+reality (validator count, scenario list, gate inventory), opens an issue or PR on drift, advisory (🟨).
+Pairs with the memory-wiki end-session sweep. Specced; not built.
+
+## B6 verdict (SME consortium, 2026-06-29): FOLD INTO code-review — not a 9th agent
+Both SMEs agree: code-review already owns "keep docs honest" + doc-coupling-check.mjs. Ship a ~20-line
+advisory doc-lint (count fixtures/scenarios vs README/AGENT.md/CONTRACT) + weekly cron, fold drift-callout
+into code-review. New persona only if drift spans repos/needs semantic rewrites. → doc-lint built this loop.

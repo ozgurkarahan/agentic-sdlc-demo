@@ -32,7 +32,7 @@ npm --prefix demos/sample-app ci
 npm --prefix demos/sample-app run build
 npm --prefix demos/sample-app test          # 15 unit+e2e tests, all green
 
-# 2. run the whole seeded validation matrix (49 fixtures, 28 adversarial negatives)
+# 2. run the whole seeded validation matrix (74 fixtures, 45 adversarial negatives)
 node demos/validate/run.mjs                  # exit 0 only if every gate behaves correctly
 ```
 The matrix prints one row per agent/gate, each **labelled by enforcement type**, and fails loudly
@@ -93,7 +93,7 @@ GitHub does not enforce "plan approval"; the dispatcher simply *chooses* not to 
 ## Status
 
 - **T1 (local backbone): complete and green** — sample app builds + 15 tests pass; the validation
-  matrix is 49/49 with all 28 negatives caught (Loop-3 added the run-status + advisory-LM-judge gates).
+  matrix is 74/74 with all 45 negatives caught (S1–S6; run-status + advisory-LM-judge + delegated-approve gates).
 - **T2 / T3:** documented and ready to instantiate into a dedicated repo (D7→D8); not enabled on this
   asset-authoring repo by design.
 
