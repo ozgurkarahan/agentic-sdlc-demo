@@ -3,33 +3,43 @@
 A **skill** is a small, repeatable procedure an agent runs to do one job: run a
 unit's tests, check its dependencies, or deploy it. Each skill is plain markdown
 the agent runtime reads — exactly like `agents/` and `prompts/`. The skill does
-**not** contain the gate logic; it **wraps** the runnable check under
-`harness/checks/scripts/*` (the single source of truth) and tells the agent how to
-invoke it and how to read the result **honestly**.
+**not** contain the gate logic; it **wraps** a runnable check and tells the agent
+how to invoke it and how to read the result **honestly**.
 
-## Why skills exist (the "no dispatcher" model)
+## Where the gate LOGIC lives (and where it does NOT)
 
-The harness has a custom dispatcher (`_internal/harness-selftest/orchestrator/`) that proves the
-fan-out logic offline. **You do not need it to run a real build.** The same
-`AGENTS.md` + `agents/` + `prompts/` + **`skills/`** drive both runtimes:
+The runnable checks (`checks/scripts/*.mjs`, `checks/lib/*.mjs`) are the harness's
+**engine**. They live in the **harness home repo** — they are **NOT** copied into a
+target. A target carries only the markdown (`AGENTS.md` + `agents/` + `prompts/` +
+`skills/`). So a skill references a check through a location variable, not a path
+that must exist in the target:
 
-| | **Local** (Copilot CLI / sub-agents) | **GitHub** (`@copilot` + Actions) |
+- **`<HARNESS_ROOT>`** = the path to the harness home's `harness/` directory. In
+  **LOCAL** mode the orchestrator sets it (e.g. `…/agentic-sdlc-demo/harness`) and
+  the skill runs `node <HARNESS_ROOT>/checks/scripts/<check>.mjs` against the
+  target's **real git diff**.
+
+## The two enforcement modes (the same check, swapped runtime)
+
+| | **LOCAL** (Copilot CLI / sub-agents) — now | **GitHub** (`@copilot` + Actions) — added at the enforcement phase |
 |---|---|---|
-| Who runs the skill | the quality / security / deployment **agent** | the required **workflow** under `workflows/` |
-| What it executes | the SAME `checks/scripts/*` script | the SAME `checks/scripts/*` script |
+| Who runs the check | the quality / security / deployment **agent**, from the harness home | the required **workflow** |
+| How it's invoked | `node <HARNESS_ROOT>/checks/scripts/<check>.mjs` | the check is **vendored** to the target (`ci/scripts/<check>.mjs`) at push time and called by `.github/workflows/*.yml` |
 | What blocks a bad change | the agent reports honestly + a human gate | the required status check |
 
-A skill is the bridge: an agent reads the skill, runs the wrapped check on the
-**real diff / real test**, and reports the result. The `.mjs`/`.py` check is the
-authority; the skill is the instruction sheet.
+> **The target never carries `checks/`.** Locally the engine stays in the harness
+> home; on GitHub it is vendored into `ci/scripts/` only when you wire enforcement
+> (see the harness home's `checks/README.md` "Tier-2 instantiation" mapping). The
+> `.github/workflows/*.yml`, `ci/scripts/*`, and `CODEOWNERS` files are therefore
+> **added at the GitHub-enforcement phase**, not part of the thin local template.
 
 ## The skills
 
-| Skill | Wraps (source of truth) | Owner agent |
+| Skill | Wraps (engine in the harness home) | Owner agent |
 |---|---|---|
-| [`run-tests`](run-tests.skill.md) | the unit's `requiredTest` + `checks/scripts/trajectory-check.mjs` + `eval-rubric.mjs` | quality-test |
-| [`check-deps`](check-deps.skill.md) | `checks/scripts/pin-check.mjs` | security-compliance |
-| [`deploy`](deploy.skill.md) | container build + `checks/scripts/smoke-check.mjs` + `checks/lib/run-status.mjs` | deployment |
+| [`run-tests`](run-tests.skill.md) | the unit's `requiredTest` + `<HARNESS_ROOT>/checks/scripts/trajectory-check.mjs` + `eval-rubric.mjs` | quality-test |
+| [`check-deps`](check-deps.skill.md) | `<HARNESS_ROOT>/checks/scripts/pin-check.mjs` | security-compliance |
+| [`deploy`](deploy.skill.md) | container build + `<HARNESS_ROOT>/checks/scripts/smoke-check.mjs` + `checks/lib/run-status.mjs` | deployment |
 
 ## Honesty rules (apply to every skill)
 

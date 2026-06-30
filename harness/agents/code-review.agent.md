@@ -31,4 +31,7 @@ Catch quality and architecture issues before a human reviewer spends attention, 
 - Review heuristics + architecture-impact rules → repo `AGENTS.md` + `[architecture docs path]`.
 
 ## Doc-steward (folded in, SME consortium 2026-06-29)
-- On schedule/PR: run `node harness/checks/scripts/doc-lint.mjs` — counts fixtures/scenarios vs README/AGENT.md/HARNESS_TESTING; opens a doc-drift issue on mismatch. Advisory 🟨, never blocks. (Not a 9th agent.)
+- On schedule/PR the orchestrator may run the doc-lint check from the harness home
+  (`node <HARNESS_ROOT>/checks/scripts/doc-lint.mjs`) — it counts the repo's
+  fixtures/scenarios against its docs (`README` / `AGENTS.md`) and opens a doc-drift
+  issue on mismatch. Advisory 🟨, never blocks. (Not a 9th agent.)

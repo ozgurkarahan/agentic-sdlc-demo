@@ -1,9 +1,10 @@
 # AGENTS.md — example repo-wide rule file (EXAMPLE — copy to a target repo root)
 
-> **This is a drop-in EXAMPLE.** It lives under `docs/agentic-engineering-on-github/harness/` so it
-> does **not** govern this demo repo. To use it, copy this file to the **root** of a target repo as
-> `AGENTS.md` and adapt the bracketed parts. It is the **static context** every Copilot coding-agent
-> instance loads — the single highest-leverage harness artifact (`Agent = Model + Harness`).
+> **This is a drop-in EXAMPLE.** In the harness home it lives under `harness/` so it does **not**
+> govern that repo. To use it, copy this file to the **root** of a target repo as `AGENTS.md` and
+> adapt the bracketed parts (the bootstrap step fills them and removes these EXAMPLE notes). It is
+> the **static context** every Copilot coding-agent instance loads — the single highest-leverage
+> harness artifact (`Agent = Model + Harness`).
 >
 > **It does not enforce anything by itself.** Real enforcement comes from rulesets, required checks,
 > required reviews, and Environments configured in the target repo (see `README.md` here).
@@ -57,6 +58,13 @@ a small REST API service. Replace with the target repo's real service.]`
 
 ## 6. The harness around you (for reference)
 
+> **Enforcement modes.** The agent/prompt/skill markdown below is the thin template a
+> target carries. The runnable **checks** (`checks/scripts/*.mjs`) stay in the harness
+> **home** and run locally via `<HARNESS_ROOT>` (see `skills/README.md`). The
+> **GitHub-phase** files — `workflows/*.yml`, vendored `ci/scripts/*`, `CODEOWNERS` —
+> are added only when you wire required-check enforcement on GitHub; they are **not**
+> part of the thin local template.
+
 | Role | Where it's defined |
 |---|---|
 | Orchestrator / Dispatcher | `.github/agents/orchestrator.agent.md` |
@@ -68,11 +76,12 @@ a small REST API service. Replace with the target repo's real service.]`
 | Code Review | `.github/agents/code-review.agent.md` |
 | Deployment / Validation | `.github/agents/deployment.agent.md` |
 | Repeatable procedures | `.github/prompts/*.prompt.md` |
-| Skills (checks agents invoke) | `.github/skills/*.skill.md` → `skills/` (run-tests · check-deps · deploy) |
+| Skills (checks agents invoke) | `.github/skills/*.skill.md` (run-tests · check-deps · deploy) |
 | Work intake | `.github/ISSUE_TEMPLATE/work-unit.yml` |
-| Verification | `.github/workflows/tests-and-evals.yml` |
-| Security gate | `.github/workflows/security-gate.yml` |
 | Safety overlay | `.github/instructions/agent-safety.instructions.md` |
+| Verification (GitHub phase) | `.github/workflows/tests-and-evals.yml` — *added at the enforcement phase* |
+| Security gate (GitHub phase) | `.github/workflows/security-gate.yml` — *added at the enforcement phase* |
+| Code ownership (GitHub phase) | `CODEOWNERS` — *added at the enforcement phase* |
 
 > 🔒 **IF HIGH-ASSURANCE.** Add: mandatory multi-party plan + release approval; a dedicated
 > Security/Compliance owner; "all security + eval checks green before merge"; stricter rulesets and

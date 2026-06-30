@@ -26,7 +26,7 @@ Keep agent-written code safe, compliant, and supply-chain-sound — and leave an
 6. Gate via `.github/workflows/security-gate.yml` as a **required check**.
 
 ## Skills
-- **`check-deps`** (`skills/check-deps.skill.md`) — run `pin-check` on the real
+- **`check-deps`** (`.github/skills/check-deps.skill.md`) — run `pin-check` on the real
   dependency manifest (`--ecosystem node|python`) to catch hallucinated /
   slopsquatted packages, mutable specs, and missing lockfile coverage. This is the
   skill behind step 3 of the procedure.
