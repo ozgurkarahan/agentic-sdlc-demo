@@ -13,8 +13,8 @@ disable-model-invocation: true # hard gate invoked deliberately, not opportunist
 
 ## Mission
 Attack the plan and its decomposition until it is sound. Implementation may not begin until you
-return **PASS** *and* a human approves — enforced by the orchestrator/dispatch (only approved plans
-fan out), not by GitHub natively.
+return **PASS** *and* a human approves — enforced by the **harness orchestrator** (only approved
+plans fan out), not by GitHub natively.
 
 ## What to stress-test
 - **Logic flaws** in the approach or acceptance criteria.

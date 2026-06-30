@@ -40,7 +40,7 @@ unit — leaving a clean branch the harness gates can verify on a real diff.
 - Never refactor unrelated code or expand scope beyond the DoD.
 
 ## Skills
-- **`run-tests`** (`skills/run-tests.skill.md`) — run the unit's `requiredTest` + trajectory/eval on
+- **`run-tests`** (`.github/skills/run-tests.skill.md`) — run the unit's `requiredTest` + trajectory/eval on
   the real diff and report honestly. The dev-fleet agent runs this before reporting "done".
 
 ## Output

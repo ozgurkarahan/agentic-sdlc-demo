@@ -20,8 +20,8 @@ Take the integrated, merged change to `{{DEPLOY_TARGET}}` safely and report a tr
 3. **Observe the deploy workflow's RUN CONCLUSION (Loop-3, G1/G3).** A green `/healthz` is NOT a green
    pipeline. Read the GitHub Actions run for the deployed SHA and treat anything other than
    `success`/`neutral` (failure, cancelled, timed_out, skipped, or still-running) as a **NO-GO**. The
-   pure oracle is `harness/checks/lib/run-status.mjs`; the live observer is
-   `orchestrator/cli.mjs --watch --repo <o/n> --sha <sha> --workflow deploy [--report-issue <n>]`.
+   pure oracle is `<HARNESS_ROOT>/checks/lib/run-status.mjs`, run by the orchestrator from the harness
+   home (`--watch --repo <o/n> --sha <sha> --workflow deploy [--report-issue <n>]`).
 4. Generate **synthetic traffic / load** to validate behavior under realistic conditions.
 5. Report **health + run-conclusion + a go/no-go** signal back to the PR/Issue; keep **rollback** ready
    and automatic on failure.
@@ -34,7 +34,7 @@ Take the integrated, merged change to `{{DEPLOY_TARGET}}` safely and report a tr
 - Never deploy outside the Environment's protection rules (required reviewers / wait timers).
 
 ## Skills
-- **`deploy`** (`skills/deploy.skill.md`) — build the container for the target
+- **`deploy`** (`.github/skills/deploy.skill.md`) — build the container for the target
   arch, smoke the running service on a parameterized probe, and gate on the deploy
   workflow's **run conclusion** (not just `/healthz`). This is the skill behind
   steps 1–3 of the procedure.

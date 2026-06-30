@@ -38,7 +38,8 @@ build + dry-run in Phase 1, real target deploy in Phase 2 (human-gated).
    `success`/`neutral` as **NO-GO**:
    ```bash
    node <HARNESS_ROOT>/checks/lib/run-status.mjs   # pure oracle
-   # live: orchestrator/cli.mjs --watch --repo <o/n> --sha <sha> --workflow deploy
+   # live: the orchestrator watches the deploy run from the harness home
+   #   (--watch --repo <o/n> --sha <sha> --workflow deploy)
    ```
 4. **Report health + run-conclusion + go/no-go**; keep **rollback** ready and
    automatic on failure.
