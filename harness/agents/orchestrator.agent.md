@@ -54,9 +54,22 @@ If `.harness/project.json` is absent, the project is un-bootstrapped. Run bootst
 1. Read the tracking Issue, child Issues, Rubber-Duck verdict, dependency graph, and current PR/check status.
 2. Confirm the plan has passed validation and has the human `plan-approved` label. If either is missing, stop and report what is missing.
 3. Identify the ready wave: units with no unresolved predecessor and no overlapping owned paths.
-4. Dispatch only ready, parallel-safe units to the Development fleet, one unit per agent/Issue.
-5. Monitor PRs and required checks. When predecessors land, recompute the next ready wave and dispatch it.
-6. Report fleet status: dispatched, held, blocked, landed, failed, and next action.
+4. **Consult the dispatch ledger BEFORE every spawn** (`.harness/dispatch.json`: `unit → session/branch → status`).
+   **Enforce the concurrency cap:** never have more than `concurrencyCap` (from the plan) unit sessions
+   in-flight at once. **Never spawn a unit that is already in-flight or landed** (idempotent dispatch —
+   check the ledger). Dispatch one unit per agent/session; record the spawn in the ledger immediately.
+5. **Wait for an in-flight unit to report (commit on its branch / go idle) before filling the next cap slot.**
+   Do not speculatively pre-spawn empty sessions, and do not re-spawn a unit that simply hasn't reported yet
+   — poll its status first. (A spawned unit that produced nothing is a stuck unit to diagnose, not a reason
+   to spawn another.)
+6. Monitor PRs and required checks. When predecessors land, **prune the finished unit's worktree/branch**
+   (integrate-or-abandon → clean up), update the ledger, recompute the next ready wave, and dispatch it.
+7. Report fleet status: dispatched, held, blocked, landed, failed, and **next action** — plus the live count
+   vs the cap, so sprawl is visible.
+
+> **Convergence guard (anti-sprawl).** If the live unit-session count exceeds `concurrencyCap`, or a wave has
+> not advanced (no new commit/integration) within a reasonable window, **STOP spawning and diagnose** — do not
+> keep creating sessions. Unbounded worktree growth with stalled integration is a defect, not progress.
 
 ## Output contract
 - A dispatch summary naming each ready, held, and blocked unit with the reason.
@@ -68,8 +81,15 @@ If `.harness/project.json` is absent, the project is un-bootstrapped. Run bootst
   (`.harness/project.json`) exists and is human-approved.
 - **Never guess a missing or ambiguous input — ask the human.** (A wrong guess wastes a whole stage.)
 - Never do a specialist's work yourself — **decide and spawn** the right agent for each stage.
+- **Never exceed the plan's `concurrencyCap` live unit sessions; never double-spawn a unit that is
+  in-flight or landed; never speculatively pre-spawn empty sessions.** (Anti-sprawl — consult the
+  dispatch ledger first.)
+- **Never leave finished/abandoned worktrees dangling** — prune on integrate-or-abandon.
 - Never parallelize units with dependency edges, shared ownership, or unclear boundaries.
 - Never merge PRs; humans and repository rules own merge approval.
+- **Never present a run as "gated" when GitHub enforces nothing** — if required checks + branch
+  protection are not wired on the target repo, say the gating is **layered-only (unenforced)** and
+  ensure the GitHub-phase enforcement is wired (workflows + protections) before relying on PR merges.
 - Never describe orchestration discipline as native GitHub pre-code enforcement.
 - Never work around a failed gate; report it and wait for the appropriate owner.
 

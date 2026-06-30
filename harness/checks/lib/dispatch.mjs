@@ -17,18 +17,27 @@
 //   }
 
 /** @typedef {{ id:string, title?:string, paths?:string[], parallelSafe?:boolean, dependsOn?:string[] }} Unit */
-/** @typedef {{ intent?:string, planApproved?:boolean, units:Unit[] }} Plan */
-/** @typedef {{ landed?:string[] }} State */
+/** @typedef {{ intent?:string, planApproved?:boolean, concurrencyCap?:number, units:Unit[] }} Plan */
+/** @typedef {{ landed?:string[], inFlight?:string[] }} State */
 
 /**
  * Decide which units to fan out right now, given an (optionally approved) plan and what has landed.
  * Pure: same inputs → same output. Throws only on a structurally invalid plan.
+ *
+ * Concurrency + idempotency (anti-sprawl, harness Loop-6 finding F7):
+ *  - `state.inFlight` = units already dispatched/running but not yet landed. Such units are NEVER
+ *    re-dispatched (idempotent dispatch — no double-spawn).
+ *  - `plan.concurrencyCap` (default Infinity) bounds the TOTAL live units: the number newly
+ *    dispatched is capped so `inFlight.length + dispatch.length <= concurrencyCap`. Units that would
+ *    exceed the cap are held with reason `concurrency-cap` (run them in a later slot).
  * @param {Plan} plan
  * @param {State} [state]
  */
 export function decideDispatch(plan, state = {}) {
   validatePlan(plan);
   const landed = new Set(state.landed ?? []);
+  const inFlight = new Set(state.inFlight ?? []);
+  const cap = Number.isFinite(plan.concurrencyCap) ? plan.concurrencyCap : Infinity;
   const units = plan.units;
   const byId = new Map(units.map((u) => [u.id, u]));
 
@@ -50,6 +59,7 @@ export function decideDispatch(plan, state = {}) {
 
   for (const u of units) {
     if (landed.has(u.id)) continue;
+    if (inFlight.has(u.id)) continue; // already dispatched/running — never re-spawn (idempotent)
     const deps = u.dependsOn ?? [];
     const missing = deps.filter((d) => !landed.has(d));
     if (missing.length > 0) {
@@ -96,14 +106,25 @@ export function decideDispatch(plan, state = {}) {
     }
   }
 
+  // Concurrency cap (anti-sprawl): bound total live units so inFlight + dispatch <= cap.
+  // Deterministic: keep the dispatch order already computed; hold the overflow.
+  const slots = Math.max(0, cap - inFlight.size);
+  let capped = dispatch;
+  if (dispatch.length > slots) {
+    capped = dispatch.slice(0, slots);
+    for (const id of dispatch.slice(slots)) {
+      held.push({ id, reason: `concurrency-cap: ${inFlight.size} in-flight + cap ${cap} leaves ${slots} slot(s)` });
+    }
+  }
+
   return {
     approved: true,
     refusal: null,
-    dispatch,
+    dispatch: capped,
     held,
     conflicts,
     enforcement: 'local-assertion', // 🟦 the wave decision is orchestration logic
-    _meta: { ready: ready.map((u) => u.id), landed: [...landed], total: units.length, byId: [...byId.keys()] },
+    _meta: { ready: ready.map((u) => u.id), landed: [...landed], inFlight: [...inFlight], cap, total: units.length, byId: [...byId.keys()] },
   };
 }
 
