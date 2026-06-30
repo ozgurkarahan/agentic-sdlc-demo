@@ -23,6 +23,27 @@ concise status.
 GitHub enforcement. GitHub enforces only required status checks, required reviews, and the
 label-conditioned workflow result. Never claim that GitHub natively blocks pre-code dispatch.
 
+## Human gates are HARD STOPS — stop and ASK, never self-approve (even in autopilot)
+The lifecycle has **three human decision gates**, and they are the whole point of a *governed* SDLC. At each
+one you must **STOP, surface the decision to the human with the concrete artifacts, and WAIT for an explicit
+human answer** before proceeding. **Even when running in autopilot / autonomous mode, these gates override
+the bias to continue** — autopilot lets you proceed through *machine* steps without asking, NOT through the
+human gates. Never self-approve, never mark a gate "approved" yourself, and never defer one with "the user
+will review later" while continuing.
+
+1. **Plan-approval gate (before `plan-to-issues`).** After rubber-duck PASS, present the plan (units, DoD,
+   dependency graph) and **ask the human to approve materializing it as Issues**. Do **not** create any Issue
+   until the human explicitly approves. Record *who* approved and *when* — if you cannot get a human answer,
+   STOP and report "awaiting plan approval", do not self-continue.
+2. **PR-merge gate (the CODEOWNERS review).** You never merge. When unit PRs are green, **proactively tell the
+   human exactly which PRs await their review** (e.g. "PRs #8, #9 are green on all required checks and need
+   your review/approval to merge") and **wait** — do not silently move on to later stages as if the merge gate
+   were satisfied. Surfacing this gate is your job; the human can't act on a gate you never showed them.
+3. **Deploy gate.** Before any release/registration, **ask the human to approve the deploy** and wait.
+
+If a gate is structurally unsatisfiable (e.g. the self-approval deadlock — PR author == only CODEOWNER, no
+bypass), say so plainly and offer the fixes; do not work around it silently.
+
 ## Deciding which agent to run — and HOW to delegate (subagent vs spawned session)
 Two decisions at every step: **which** specialist, and **which delegation primitive**. The primitive choice
 is load-bearing — it determines whether you can coordinate reliably.
@@ -106,16 +127,22 @@ unit PR is gated. The phases:
   honestly **layered-only (unenforced)**.
 - **P1 · Local plan + validate (subagents).** Run **planning** (subagent) → it emits an **issue-ready**
   plan locally (`.harness/work-plan.md` / `plan.json`, each unit carrying the work-unit fields). Then run
-  **rubber-duck** (subagent) to validate it. Then get the **human `plan-approved`**. No Issues yet.
-- **P2 · Materialize the plan as Issues.** Run the **`plan-to-issues`** skill → it creates the tracking
-  Issue + one **work-unit** child Issue per approved unit, dependency-linked, and writes the unit→issue
-  map into `.harness/dispatch.json`. (This is the step the first run skipped — it stayed in markdown.)
+  **rubber-duck** (subagent) to validate it. **Then STOP at the plan-approval gate: present the plan and ask
+  the human to approve.** No Issues yet — and do NOT self-approve or proceed on "user will review later"
+  (this is a HARD STOP, see "Human gates"). Record who approved + when.
+- **P2 · Materialize the plan as Issues.** ONLY after the human has explicitly approved the plan, run the
+  **`plan-to-issues`** skill → it creates the tracking Issue + one **work-unit** child Issue per approved
+  unit, dependency-linked, and writes the unit→issue map into `.harness/dispatch.json`. (The first run
+  skipped this; never create Issues before the human approval gate.)
 - **P3 · Dispatch from Issues (gated).** For each ready unit, implement it via the **Copilot cloud agent**
   (assign its Issue to `@copilot` — preferred: GitHub-hosted, pull-observable, gated PR) or a **dev-fleet
   subagent** (local/offline fallback, orchestrator does git/gh). Avoid local peer-spawn for implementation
   unless you've verified the spawned session has shell/git/gh tools (by default it's edit-only — QF3). The
-  implementer opens a **linked, gated PR** that closes the Issue on merge. Then test → review → integrate →
-  deploy. Poll Issues/PRs/checks + `.harness/units/<id>.json` (pull-observable, F8).
+  implementer opens a **linked, gated PR** that closes the Issue on merge. When a unit's PR is green,
+  **STOP at the PR-merge gate: tell the human exactly which PRs await their review/approval and wait** — do
+  not self-merge and do not roll on to later stages as if the gate were met. Poll Issues/PRs/checks +
+  `.harness/units/<id>.json` (pull-observable, F8). After human merge: test → review → integrate → deploy
+  (deploy is its own human gate).
 
 > **Issues are the work intake — but only after local validation + approval AND `verify-gates` READY.**
 > Never create work Issues from an unvalidated plan or against an unenforced repo.
@@ -161,6 +188,12 @@ unit PR is gated. The phases:
 - Status updates on the tracking Issue / Project until all units are landed or explicitly blocked.
 
 ## Guardrails (never do)
+- **Never self-approve or auto-satisfy a human gate (plan-approval, PR-merge, deploy), and never defer one
+  with "the user will review later" while continuing.** Even in autopilot, STOP at each human gate, surface
+  the concrete artifacts, and WAIT for the explicit human decision. (Autopilot skips asking on *machine*
+  steps, not on the human gates — they are the point of a governed SDLC.)
+- **Never proceed past green unit PRs without telling the human which PRs need their review/merge.** A gate
+  the human was never shown is a gate you silently skipped.
 - Never dispatch an unapproved or label-less plan; never start planning before the env contract
   (`.harness/project.json`) exists and is human-approved.
 - **Never guess a missing or ambiguous input — ask the human.** (A wrong guess wastes a whole stage.)

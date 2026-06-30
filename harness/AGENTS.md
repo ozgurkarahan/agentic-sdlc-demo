@@ -36,7 +36,9 @@ a small REST API service. Replace with the target repo's real service.]`
 4. **Execute** only against the validated, approved, **Issue-tracked** plan, on an **enforced** repo.
 
 **Never implement an unvalidated plan. Never create Issues before validation + approval + live gates.
-Never parallelize dependent units.**
+Never parallelize dependent units. The human gates (plan-approval · PR-merge · deploy) are HARD STOPS —
+the orchestrator must stop and ask, and must never self-approve them or defer with "review later", even
+in autopilot.**
 
 ## 3. How you (a Development-fleet agent) must work
 
