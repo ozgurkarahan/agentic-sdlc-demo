@@ -33,7 +33,9 @@ exists, make the gates **structural** (not just layered orchestration), before a
    <defaultBranch>` → creates the ruleset (PR + 1 approving review + CODEOWNERS review + the plan's
    `requiredChecks`) and the `staging`/`production` Environments (production = required-reviewer release
    gate). Idempotent; `-Remove` tears it down.
-4. **Verify the gate BITES:** a deliberately-failing PR is blocked; a clean PR merges. That is the live proof.
+4. **Verify the gate BITES** — run the **`verify-gates`** skill (workflows present + required checks set +
+   branch protection + CODEOWNERS), then confirm a deliberately-failing PR is blocked and a clean PR merges.
+   `verify-gates` must report **READY** before the orchestrator may create work Issues or dispatch. That is the live proof.
 This is repo **config** (not a cloud resource) — the step that turns "layered-only (unenforced)" into real
 GitHub-native enforcement. Without it, unit PRs merge with no required checks / no branch protection (the F6 gap).
 
@@ -63,6 +65,9 @@ GitHub-native enforcement. Without it, unit PRs merge with no required checks / 
 - **`enforce-protections`** (`harness/deploy/github/enforce-protections.ps1`) — wire GitHub-native
   enforcement (ruleset: required checks + 1 review + CODEOWNERS; staging/production Environments) at repo
   creation, BEFORE the first unit PR. Idempotent; secretless (`gh` auth); `-Remove` for teardown.
+- **`verify-gates`** (`.github/skills/verify-gates.skill.md`) — prove enforcement is LIVE (workflows +
+  required checks + branch protection + CODEOWNERS) and report READY/NOT-READY; the orchestrator gates on
+  READY before creating Issues or dispatching.
 - **`deploy`** (`.github/skills/deploy.skill.md`) — build the container for the target
   arch, smoke the running service on a parameterized probe, and gate on the deploy
   workflow's **run conclusion** (not just `/healthz`). This is the skill behind

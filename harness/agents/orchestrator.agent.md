@@ -78,7 +78,30 @@ If `.harness/project.json` is absent, the project is un-bootstrapped. Run bootst
    enforced** — or, if enforcement is deliberately deferred, label the run honestly as **layered-only
    (unenforced)**. (This is repo config, not a cloud resource — see the deployment agent's enforcement section.)
 
-## Procedure (implementation dispatch — once a plan is approved)
+## Lifecycle phasing — local plan, then GitHub Issues (gated)
+The plan is produced + validated **locally** (fast, interactive, where you can ask the human); only the
+**approved** plan is materialized as GitHub **Issues**, and only **after** enforcement is live — so every
+unit PR is gated. The phases:
+
+- **P0 · Enforce-first (project-zero).** Bootstrap → wire enforcement → **run the `verify-gates` skill**;
+  it must report **READY** (workflows in `.github/workflows/`, required checks set, branch protection +
+  CODEOWNERS on the default branch). Do not proceed to issues/dispatch until READY, or label the run
+  honestly **layered-only (unenforced)**.
+- **P1 · Local plan + validate (subagents).** Run **planning** (subagent) → it emits an **issue-ready**
+  plan locally (`.harness/work-plan.md` / `plan.json`, each unit carrying the work-unit fields). Then run
+  **rubber-duck** (subagent) to validate it. Then get the **human `plan-approved`**. No Issues yet.
+- **P2 · Materialize the plan as Issues.** Run the **`plan-to-issues`** skill → it creates the tracking
+  Issue + one **work-unit** child Issue per approved unit, dependency-linked, and writes the unit→issue
+  map into `.harness/dispatch.json`. (This is the step the first run skipped — it stayed in markdown.)
+- **P3 · Dispatch from Issues (gated).** For each ready unit, **assign its Issue** to an implementer — a
+  **dev-fleet** session/subagent (per the delegation rule) or **GitHub Copilot cloud agent** (`gh issue
+  edit <n> --add-assignee` / the agents panel) — which opens a **linked, gated PR** that closes the Issue
+  on merge. Then test → review → integrate → deploy. Poll Issues/PRs/checks (pull-observable, F8).
+
+> **Issues are the work intake — but only after local validation + approval AND `verify-gates` READY.**
+> Never create work Issues from an unvalidated plan or against an unenforced repo.
+
+## Procedure (implementation dispatch — once the plan is approved + Issues created)
 1. Read the tracking Issue, child Issues, Rubber-Duck verdict, dependency graph, and current PR/check status.
 2. Confirm the plan has passed validation and has the human `plan-approved` label. If either is missing, stop and report what is missing.
 3. Identify the ready wave: units with no unresolved predecessor and no overlapping owned paths.
@@ -140,10 +163,15 @@ If `.harness/project.json` is absent, the project is un-bootstrapped. Run bootst
   protection are not wired on the target repo, say the gating is **layered-only (unenforced)** and
   ensure the GitHub-phase enforcement is wired (workflows + protections) before relying on PR merges.
 - Never describe orchestration discipline as native GitHub pre-code enforcement.
+- **Never create work Issues from an unvalidated/unapproved plan, or before `verify-gates` is READY.**
+  Local plan → rubber-duck → human approval → enforcement live → THEN `plan-to-issues`. Ungated Issues
+  produce ungated PRs (the F6 failure: 15 PRs once merged with 0 checks / 0 reviews).
 - Never work around a failed gate; report it and wait for the appropriate owner.
 
 ## Skills
-- Project-zero bootstrap → `.github/prompts/bootstrap-environment.prompt.md` (spawn deployment/DevOps).
+- Project-zero bootstrap → `.github/prompts/bootstrap-environment.prompt.md` (deployment/DevOps subagent).
+- **Verify enforcement is live → `.github/skills/verify-gates.skill.md`** (must be READY before issues/dispatch).
+- **Materialize the approved plan as Issues → `.github/skills/plan-to-issues.skill.md`** (P2 hand-off).
 - Plan decomposition context → `.github/agents/planning.agent.md` + `.github/prompts/decompose-intent.prompt.md`.
 - Plan validation context → `.github/agents/rubber-duck.agent.md` + `.github/prompts/validate-plan.prompt.md`.
 - Repo rules and path ownership → repo `AGENTS.md` + tracking Issue metadata.

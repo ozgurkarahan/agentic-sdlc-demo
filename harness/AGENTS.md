@@ -20,15 +20,23 @@ a small REST API service. Replace with the target repo's real service.]`
 - **Run locally:** `[command]`
 - **Test:** `[command]` · **Lint:** `[command]` · **Build:** `[command]`
 
-## 2. The discipline — Plan → Validate → Execute (non-negotiable)
+## 2. The discipline — Enforce → Plan → Validate → Issues → Execute (non-negotiable)
 
-1. **Plan first.** No implementation without an approved plan: Issues with acceptance criteria, a
-   Definition of Done, a test/eval strategy, and a dependency graph.
+0. **Enforce first.** Before any work Issue exists, GitHub-native gates must be **LIVE** on the repo —
+   gate workflows in `.github/workflows/`, required status checks, branch protection + **CODEOWNERS** on the
+   default branch (prove it with the **`verify-gates`** skill). Ungated Issues produce ungated PRs.
+1. **Plan first (locally).** No implementation without an approved plan: each unit specified with acceptance
+   criteria, a Definition of Done, a test/eval strategy, declared paths, a required test, and a dependency
+   graph — emitted as a **LOCAL, issue-ready artifact** (`.harness/work-plan.md`), not yet GitHub Issues.
 2. **Validate the plan.** The plan passes a **rubber-duck / devil's-advocate** review **and** a human
    approval **before any code is written**. This is a hard gate.
-3. **Execute** only against a validated, approved plan.
+3. **Materialize as Issues.** Only the **approved** plan becomes GitHub Issues — one tracking Issue + one
+   **work-unit** child per unit — via the **`plan-to-issues`** skill. Issues are the durable work intake the
+   pipeline dispatches from (assign each to a dev-fleet agent or **Copilot cloud agent**).
+4. **Execute** only against the validated, approved, **Issue-tracked** plan, on an **enforced** repo.
 
-**Never implement an unvalidated plan. Never parallelize dependent units.**
+**Never implement an unvalidated plan. Never create Issues before validation + approval + live gates.
+Never parallelize dependent units.**
 
 ## 3. How you (a Development-fleet agent) must work
 
@@ -77,12 +85,12 @@ a small REST API service. Replace with the target repo's real service.]`
 | Deployment / Validation | `.github/agents/deployment.agent.md` |
 | Repeatable procedures | `.github/prompts/*.prompt.md` |
 | Project-zero bootstrap | `.github/prompts/bootstrap-environment.prompt.md` → produces `.harness/project.json` |
-| Skills (checks agents invoke) | `.github/skills/*.skill.md` (run-tests · check-deps · deploy) |
-| Work intake | `.github/ISSUE_TEMPLATE/work-unit.yml` |
+| Skills (checks agents invoke) | `.github/skills/*.skill.md` (run-tests · check-deps · deploy · **verify-gates** · **plan-to-issues**) |
+| Work intake | `.github/ISSUE_TEMPLATE/work-unit.yml` — materialized from the approved plan by **`plan-to-issues`** |
 | Safety overlay | `.github/instructions/agent-safety.instructions.md` |
-| Verification (GitHub phase) | `.github/workflows/tests-and-evals.yml` — *added at the enforcement phase* |
-| Security gate (GitHub phase) | `.github/workflows/security-gate.yml` — *added at the enforcement phase* |
-| Code ownership (GitHub phase) | `CODEOWNERS` — *added at the enforcement phase* |
+| Verification (GitHub phase — **wired before any Issue**) | `.github/workflows/tests-and-evals.yml` |
+| Security gate (GitHub phase — **wired before any Issue**) | `.github/workflows/security-gate.yml` |
+| Code ownership (GitHub phase — **wired before any Issue**) | `CODEOWNERS` |
 
 > 🔒 **IF HIGH-ASSURANCE.** Add: mandatory multi-party plan + release approval; a dedicated
 > Security/Compliance owner; "all security + eval checks green before merge"; stricter rulesets and
