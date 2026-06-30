@@ -54,8 +54,9 @@ is load-bearing — it determines whether you can coordinate reliably.
   track, works at any nesting level. Use it for: bootstrap, planning, validation (rubber-duck), quality-test,
   code-review, security-compliance, and the deploy go/no-go.
 - **For IMPLEMENTATION units, prefer in this order:**
-  1. **GitHub Copilot CLOUD AGENT — assign the work-unit Issue to `@copilot`** (`gh issue edit <n> --add-assignee
-     copilot` / the agents panel). This is the DEFAULT implementer once Issues exist and the repo is gated:
+  1. **GitHub Copilot CLOUD AGENT — assign the work-unit Issue to `@copilot`** (assign via GraphQL
+     `replaceActorsForAssignable` with the `copilot-swe-agent` Bot node id — NOT `gh issue edit --add-assignee
+     copilot`, which 404s; see the `plan-to-issues` skill). This is the DEFAULT implementer once Issues exist and the repo is gated:
      the cloud agent runs in its OWN GitHub-Actions environment, pushes a branch, opens a **gated PR**, and
      runs the checks — **pull-observable by design** (the branch/PR/checks *are* the status bus) with **true
      parallelism** and **no local-tooling dependency**. It natively dissolves F8 + F7.

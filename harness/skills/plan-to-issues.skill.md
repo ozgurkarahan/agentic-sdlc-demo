@@ -70,9 +70,31 @@ owner: orchestrator
    session:"", status:"queued", dependsOn:[issue numbers]}] }`. This is what the orchestrator polls +
    updates (pull-observable, the F8 discipline) so implementation is driven from Issues, not chat.
 7. **Output**: the tracking issue `#T` + the child issue numbers + the dispatch map. The orchestrator now
-   dispatches each ready unit by **assigning its issue** to an implementer (a dev-fleet session/subagent,
-   or **Copilot cloud agent** — `gh issue edit <n> --add-assignee …` / the agents panel), which opens a
-   gated PR that closes the issue on merge.
+   dispatches each ready unit by **assigning its issue** to an implementer (preferably the **Copilot cloud
+   agent**, else a dev-fleet subagent), which opens a gated PR that closes the issue on merge.
+
+## Assigning the Copilot cloud agent (use GraphQL, NOT `--add-assignee copilot`)
+The REST assignee API does **not** recognize the login `copilot`/`Copilot` → `gh issue edit <n> --add-assignee
+copilot` returns **HTTP 404**, which looks like "the bot lacks repo access" but usually isn't. Copilot is
+assignable when it appears in the repo's `suggestedActors(capabilities:[CAN_BE_ASSIGNED])` as the **Bot
+`copilot-swe-agent`**. Assign it via the GraphQL mutation using that Bot's node id:
+```bash
+# 1) confirm Copilot is assignable + get its node id
+gh api graphql -f query='query($o:String!,$r:String!){ repository(owner:$o,name:$r){
+  suggestedActors(capabilities:[CAN_BE_ASSIGNED],first:20){ nodes{ login __typename ... on Bot{ id } } } } }' \
+  -f o=<org> -f r=<repo>
+# 2) get the issue node id
+gh api graphql -f query='query($o:String!,$r:String!,$n:Int!){ repository(owner:$o,name:$r){ issue(number:$n){ id } } }' \
+  -f o=<org> -f r=<repo> -F n=<issue-number>
+# 3) assign (replaceActorsForAssignable with the copilot-swe-agent Bot id)
+gh api graphql -f query='mutation($a:ID!,$ids:[ID!]!){ replaceActorsForAssignable(input:{assignableId:$a,actorIds:$ids}){
+  assignable{ ... on Issue{ number assignees(first:5){ nodes{ login } } } } } }' \
+  -f a=<issue-node-id> -f ids=<copilot-swe-agent-bot-id>
+```
+If `suggestedActors` does **not** list `copilot-swe-agent`, THEN the coding agent is genuinely not enabled —
+enable it via the org/repo Copilot policy. The cloud agent opens a branch `copilot/*` and a PR authored by
+`app/copilot-swe-agent` (a non-human identity → the human CODEOWNER can approve it, dissolving the QF7
+self-approval deadlock; and it runs in its own GitHub-Actions env → no local shell/git tooling gap, QF3).
 
 ## Honesty rules (hard)
 - **Never create work issues before `verify-gates` is READY** — ungated issues produce ungated PRs (F6).
