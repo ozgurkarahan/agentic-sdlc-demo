@@ -135,11 +135,14 @@ unit PR is gated. The phases:
   **`plan-to-issues`** skill → it creates the tracking Issue + one **work-unit** child Issue per approved
   unit, dependency-linked, and writes the unit→issue map into `.harness/dispatch.json`. (The first run
   skipped this; never create Issues before the human approval gate.)
-- **P3 · Dispatch from Issues (gated).** For each ready unit, implement it via the **Copilot cloud agent**
-  (assign its Issue to `@copilot` — preferred: GitHub-hosted, pull-observable, gated PR) or a **dev-fleet
-  subagent** (local/offline fallback, orchestrator does git/gh). Avoid local peer-spawn for implementation
-  unless you've verified the spawned session has shell/git/gh tools (by default it's edit-only — QF3). The
-  implementer opens a **linked, gated PR** that closes the Issue on merge. When a unit's PR is green,
+- **P3 · Dispatch from Issues (gated).** For each ready unit, implement it via **ONE** implementer — the
+  **Copilot cloud agent** (assign its Issue to `@copilot` — preferred: GitHub-hosted, pull-observable, gated
+  PR) **or** a **dev-fleet subagent** (local/offline fallback, orchestrator does git/gh), **never both for the
+  same unit** (the QF13 double-dispatch → two competing PRs). Record the chosen implementer in the ledger.
+  Avoid local peer-spawn for implementation unless you've verified the spawned session has shell/git/gh tools
+  (by default it's edit-only — QF3). The implementer opens a **linked, gated PR** that closes the Issue on
+  merge; if the cloud agent leaves it a **draft**, mark it ready once checks are green + its artifact is
+  `testing-passed` (QF12). When a unit's PR is green,
   **STOP at the PR-merge gate: tell the human exactly which PRs await their review/approval and wait** — do
   not self-merge and do not roll on to later stages as if the gate were met. Poll Issues/PRs/checks +
   `.harness/units/<id>.json` (pull-observable, F8). After human merge: test → review → integrate → deploy
@@ -152,10 +155,13 @@ unit PR is gated. The phases:
 1. Read the tracking Issue, child Issues, Rubber-Duck verdict, dependency graph, and current PR/check status.
 2. Confirm the plan has passed validation and has the human `plan-approved` label. If either is missing, stop and report what is missing.
 3. Identify the ready wave: units with no unresolved predecessor and no overlapping owned paths.
-4. **Consult the dispatch ledger BEFORE every spawn** (`.harness/dispatch.json`: `unit → session/branch → status`).
-   **Enforce the concurrency cap:** never have more than `concurrencyCap` (from the plan) unit sessions
-   in-flight at once. **Never spawn a unit that is already in-flight or landed** (idempotent dispatch —
-   check the ledger). Dispatch one unit per agent/session; record the spawn in the ledger immediately.
+4. **Consult the dispatch ledger BEFORE dispatching ANY unit** (`.harness/dispatch.json`: `unit → implementer
+   (copilot | subagent | session) / branch / PR → status`). **One implementer per unit — never dispatch a
+   unit that already has an implementer, branch, or open PR.** In particular, do **not** assign a unit's Issue
+   to the Copilot cloud agent **and** run a local dev-fleet for the same unit (the QF13 double-dispatch: it
+   produced two competing PRs #11 + #12 for WU-004). Pick ONE implementer per unit, record it in the ledger
+   immediately, and never re-dispatch an in-flight or landed unit. **Enforce the concurrency cap:** never have
+   more than `concurrencyCap` (from the plan) units in-flight at once.
 5. **Determine unit status by POLLING durable signals — never by waiting for a chat message.** A spawned
    session's report channel is push-only and unreliable; the source of truth is what you can PULL: the
    unit's **pushed branch / open PR** (`gh pr list`, `git ls-remote`) and its **status artifact**
@@ -164,8 +170,13 @@ unit PR is gated. The phases:
    observable signal within a reasonable window" as STUCK → diagnose/timeout that unit; never silent-wait
    on it and never re-spawn a unit that simply hasn't reported.** (A spawned unit that left no branch/
    artifact is a unit to diagnose, not a reason to spawn another — this is the F8 root-cause discipline.)
-6. Monitor PRs and required checks. When predecessors land, **prune the finished unit's worktree/branch**
-   (integrate-or-abandon → clean up), update the ledger, recompute the next ready wave, and dispatch it.
+6. Monitor PRs and required checks. **A unit is DONE when its PR exists, its required checks are green, and its
+   `.harness/units/<id>.json` says `testing-passed`/`pushed` — even if the PR is still a DRAFT.** The Copilot
+   cloud agent often leaves a finished PR in draft (QF12), which does NOT auto-surface as ready and silently
+   stalls the run. So when you detect done-but-draft: **mark it ready (`gh pr ready <n>`), sync it if behind
+   main, dedupe any duplicate PR for the same unit (close the extra — QF13), then STOP at the PR-merge human
+   gate** and tell the human. When predecessors land, **prune the finished unit's branch** (integrate-or-abandon
+   → clean up stale branches), update the ledger, recompute the next ready wave, and dispatch it.
 7. Report fleet status: dispatched, held, blocked, landed, failed, and **next action** — plus the live count
    vs the cap, so sprawl is visible.
 
@@ -203,6 +214,11 @@ unit PR is gated. The phases:
 - **Never exceed the plan's `concurrencyCap` live unit sessions; never double-spawn a unit that is
   in-flight or landed; never speculatively pre-spawn empty sessions.** (Anti-sprawl — consult the
   dispatch ledger first.)
+- **Never dispatch a unit to two implementers.** One implementer per unit — do NOT assign a unit's Issue to
+  the Copilot cloud agent AND run a local dev-fleet for it (QF13 double-dispatch → competing PRs). If two PRs
+  ever target the same unit, keep one and CLOSE the duplicate.
+- **Never let a finished-but-DRAFT cloud-agent PR stall the run.** If a unit's PR is green + its artifact is
+  `testing-passed`, treat it as done: `gh pr ready`, sync if behind, then surface it at the PR-merge gate (QF12).
 - **Never leave finished/abandoned worktrees dangling** — prune on integrate-or-abandon.
 - **Never infer a unit is alive (or dead) from silence.** Unit status comes from POLLING its branch/PR +
   `.harness/units/<id>.json` artifact — not from a chat message you happened to receive. No observable
