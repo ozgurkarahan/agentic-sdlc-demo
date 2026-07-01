@@ -81,6 +81,13 @@ gh repo view $Repo 1>$null 2>$null
 if ($LASTEXITCODE -ne 0) { throw "Repo '$Repo' not reachable. Create it + push the harness first (S1)." }
 Info "gh authenticated; repo $Repo reachable."
 
+# Auto-delete merged unit branches (repo hygiene). Merged work-unit branches are throwaway; GitHub
+# deletes the head branch automatically on merge so the repo doesn't accumulate stale branches. Idempotent.
+if (-not $Remove) {
+  Invoke-GhApi -Method PATCH -Path "repos/$Repo" -JsonBody (@{ delete_branch_on_merge = $true } | ConvertTo-Json) | Out-Null
+  Info "delete_branch_on_merge = true (merged unit branches auto-pruned)."
+}
+
 # -- teardown path --------------------------------------------------------------
 if ($Remove) {
   Step "Removing GitHub-side enforcement (teardown)"
