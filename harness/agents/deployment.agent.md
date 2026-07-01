@@ -32,7 +32,8 @@ exists, make the gates **structural** (not just layered orchestration), before a
 3. **Run** `harness/deploy/github/enforce-protections.ps1 -Repo <org>/<repo> -Reviewer <human> -Branch
    <defaultBranch>` → creates the ruleset (PR + 1 approving review + CODEOWNERS review + the plan's
    `requiredChecks`) and the `staging`/`production` Environments (production = required-reviewer release
-   gate). Idempotent; `-Remove` tears it down.
+   gate), and sets **`delete_branch_on_merge=true`** so merged unit branches are auto-pruned. Idempotent;
+   `-Remove` tears it down.
 4. **Verify the gate BITES** — run the **`verify-gates`** skill (workflows present + required checks set +
    branch protection + CODEOWNERS), then confirm a deliberately-failing PR is blocked and a clean PR merges.
    `verify-gates` must report **READY** before the orchestrator may create work Issues or dispatch. That is the live proof.
