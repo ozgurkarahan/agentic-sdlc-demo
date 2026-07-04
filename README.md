@@ -12,6 +12,13 @@ Each stage is a self-contained "functionality" the presenter can demo on its own
 
 Scaffolded 2026-06-18 from `project-template`. Not started — the first working session researches the topic and proposes the demo plan (sample app, input→lifecycle story, per-stage flows, fallback). See `AGENT.md` § **First Session Instructions**.
 
+## Repository locations
+
+This project is published at two public locations, kept in sync as mirrors:
+
+- https://github.com/ozgurkarahan/agentic-sdlc-demo
+- https://github.com/ozkara-ms/agentic-sdlc-demo
+
 ## Layout
 
 | Path | Description |
