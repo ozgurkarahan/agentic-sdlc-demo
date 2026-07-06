@@ -154,6 +154,17 @@ jobs:
           # ANTI-THEATER skip-guard: a skipped/empty suite exits 0; that must NOT count as a green gate.
           node -e "const r=require('./e2e-result.json');const p=r.numPassedTests||0,s=r.numPendingTests||0,t=r.numTotalTests||0;console.log('E2E executed: passed='+p+' skipped='+s+' total='+t);if(p<1){console.error('::error::E2E gate did not execute a passing live test (skip!=green) — refusing to promote.');process.exit(1);}"
 
+      # UI E2E (Playwright) post-deploy gate — SCENARIO-GENERAL. Runs the browser specs vs the LIVE
+      # staging URL after the API E2E, before promotion. A failing UI E2E fails deploy-staging ⇒ prod untouched.
+      - name: UI E2E (Playwright) — live staging
+        run: |
+          # Warm up (ACA scale-to-zero cold start) before launching a browser.
+          for i in $(seq 1 24); do curl -fsS "$STAGING_BASE/healthz" >/dev/null && break || sleep 5; done
+          npx playwright install --with-deps chromium
+          TEST_BASE_URL="$STAGING_BASE" npm run test:e2e:ui
+          # ANTI-THEATER skip-guard.
+          node -e "const r=require('./ui-e2e-result.json');const p=(r.stats&&r.stats.expected)||0;console.log('live UI E2E passed='+p);if(p<1){console.error('::error::live UI E2E did not execute a passing test (skip!=green).');process.exit(1);}"
+
   # ── 3. Deploy PRODUCTION by the SAME digest. Environment reviewer pause → 0% canary → shift → rollback. ──
   deploy-production:
     name: Deploy production (reviewed) + rollback

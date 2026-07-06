@@ -1,0 +1,39 @@
+# UI E2E (Playwright) — PR-time REQUIRED browser gate (blocks a bad UI/XSS PR BEFORE merge).
+#
+# A post-deploy deploy.yml job runs AFTER merge and cannot gate a PR, so this pre-merge check is the
+# one that blocks. It boots the app locally via Playwright's webServer and runs the browser specs vs
+# localhost. Make the `UI E2E (Playwright)` job a REQUIRED status check in the ruleset.
+name: UI E2E (Playwright)
+
+on:
+  pull_request:
+    branches: [ master ]
+  merge_group:            # required checks must report on the merge-queue ref too
+
+concurrency:
+  group: ui-e2e-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  ui-e2e:
+    name: UI E2E (Playwright)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+      - name: Run Playwright UI E2E (local webServer)
+        run: npm run test:e2e:ui
+      # ANTI-THEATER skip-guard: an all-skipped/empty suite exits 0; that must NOT count as green.
+      - name: Skip-guard (skip != green)
+        if: always()
+        run: |
+          node -e "const r=require('./ui-e2e-result.json');const p=(r.stats&&r.stats.expected)||0;const u=(r.stats&&r.stats.unexpected)||0;const s=(r.stats&&r.stats.skipped)||0;console.log('UI E2E passed='+p+' failed='+u+' skipped='+s);if(p<1){console.error('::error::UI E2E executed no passing test (skip!=green) — refusing green.');process.exit(1);}"

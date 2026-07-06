@@ -93,13 +93,13 @@ jobs:
           BASE: ${{ steps.ctx.outputs.base }}
           WORK_UNIT: ${{ steps.ctx.outputs.work_unit }}
         run: |
-          if [ ! -f .agent/unit.json ]; then
-            if [ "$WORK_UNIT" = "true" ]; then
-              echo "::error::work-unit PR is missing .agent/unit.json (declaredPaths + requiredTest). A Dev-fleet PR MUST declare its scope."
-              exit 1
-            fi
-            echo "no .agent/unit.json and not a work-unit PR — trajectory eval not applicable"
+          if [ "$WORK_UNIT" != "true" ]; then
+            echo "not a work-unit PR (copilot/* branch or agentic-work-unit label) — trajectory eval not applicable"
             exit 0
+          fi
+          if [ ! -f .agent/unit.json ]; then
+            echo "::error::work-unit PR is missing .agent/unit.json (declaredPaths + requiredTest). A Dev-fleet PR MUST declare its scope."
+            exit 1
           fi
           CHANGED="$(git diff --name-only "$BASE"...HEAD | paste -sd, -)"
           DECLARED="$(jq -r '.declaredPaths | join(",")' .agent/unit.json)"
@@ -168,13 +168,13 @@ jobs:
           BASE: ${{ steps.ctx.outputs.base }}
           WORK_UNIT: ${{ steps.ctx.outputs.work_unit }}
         run: |
-          if [ ! -f .agent/unit.json ]; then
-            if [ "$WORK_UNIT" = "true" ]; then
-              echo "::error::work-unit PR is missing .agent/unit.json — cannot verify it stayed in its lane."
-              exit 1
-            fi
-            echo "no .agent/unit.json and not a work-unit PR — path-scope not applicable"
+          if [ "$WORK_UNIT" != "true" ]; then
+            echo "not a work-unit PR (copilot/* branch or agentic-work-unit label) — path-scope not applicable"
             exit 0
+          fi
+          if [ ! -f .agent/unit.json ]; then
+            echo "::error::work-unit PR is missing .agent/unit.json — cannot verify it stayed in its lane."
+            exit 1
           fi
           CHANGED="$(git diff --name-only "$BASE"...HEAD | paste -sd, -)"
           DECLARED="$(jq -r '.declaredPaths | join(",")' .agent/unit.json)"
