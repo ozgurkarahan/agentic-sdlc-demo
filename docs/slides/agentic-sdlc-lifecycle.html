@@ -1,0 +1,991 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Agentic SDLC — World Cup Commentator</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg'/%3E" />
+<script>
+  (() => {
+    const param = new URLSearchParams(window.location.search).get("scoutTheme");
+    const theme =
+      param || (window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+    document.documentElement.setAttribute("data-theme", theme);
+  })();
+</script>
+<style>
+:root {
+  color-scheme: light;
+  --cp-bg: #f7f4ef;
+  --cp-bg-elevated: #fcfbf8;
+  --cp-surface: #ffffff;
+  --cp-surface-soft: #f5f5f5;
+  --cp-border: #dedede;
+  --cp-border-strong: #919191;
+  --cp-text: #242424;
+  --cp-text-muted: #5c5c5c;
+  --cp-text-soft: #6f6f6f;
+  --cp-accent: #b11f4b;
+  --cp-accent-hover: #9a1a41;
+  --cp-accent-soft: rgba(177, 31, 75, 0.08);
+  --cp-accent-fg: #ffffff;
+  --cp-success: #16a34a;
+  --cp-danger: #dc2626;
+  --cp-warning: #f59e0b;
+  --cp-link: #0078d4;
+  --cp-shadow: 0 18px 48px rgba(0, 0, 0, 0.12);
+  --cp-overlay: rgba(255, 255, 255, 0.8);
+  --cp-panel: rgba(255, 255, 255, 0.86);
+  --cp-panel-strong: rgba(255, 255, 255, 0.96);
+  --cp-sheen: rgba(255, 255, 255, 0.55);
+  --cp-highlight: rgba(177, 31, 75, 0.12);
+  --cp-proj: #0078d4;
+  --cp-proj-fg: #ffffff;
+  --cp-proj-soft: rgba(0, 120, 212, 0.08);
+}
+html[data-theme="dark"] {
+  color-scheme: dark;
+  --cp-bg: #3d3b3a;
+  --cp-bg-elevated: #343231;
+  --cp-surface: #292929;
+  --cp-surface-soft: #2e2e2e;
+  --cp-border: #474747;
+  --cp-border-strong: #5f5f5f;
+  --cp-text: #dedede;
+  --cp-text-muted: #919191;
+  --cp-text-soft: #b0b0b0;
+  --cp-accent: #fd8ea1;
+  --cp-accent-hover: #fb7b91;
+  --cp-accent-soft: rgba(253, 142, 161, 0.14);
+  --cp-accent-fg: #1a1a1a;
+  --cp-success: #4ade80;
+  --cp-danger: #f87171;
+  --cp-warning: #fbbf24;
+  --cp-link: #4da6ff;
+  --cp-shadow: 0 18px 48px rgba(0, 0, 0, 0.32);
+  --cp-overlay: rgba(41, 41, 41, 0.88);
+  --cp-panel: rgba(41, 41, 41, 0.72);
+  --cp-panel-strong: rgba(41, 41, 41, 0.96);
+  --cp-sheen: rgba(255, 255, 255, 0.04);
+  --cp-highlight: rgba(253, 142, 161, 0.12);
+  --cp-proj: #4da6ff;
+  --cp-proj-fg: #1a1a1a;
+  --cp-proj-soft: rgba(77, 166, 255, 0.14);
+}
+
+* { box-sizing: border-box; }
+html, body { height: 100%; }
+body {
+  margin: 0;
+  background:
+    radial-gradient(circle at top right, var(--cp-accent-soft), var(--cp-bg) 36rem),
+    linear-gradient(135deg, var(--cp-bg), var(--cp-bg-elevated));
+  color: var(--cp-text);
+  font-family: "Segoe UI", Aptos, Calibri, -apple-system, BlinkMacSystemFont, sans-serif;
+  overflow: hidden;
+}
+a { color: var(--cp-link); }
+button { font: inherit; }
+code, .mono { font-family: Consolas, "Courier New", Courier, monospace; }
+
+.deck {
+  width: 100vw;
+  height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 2rem;
+}
+.slide {
+  display: none;
+  position: relative;
+  width: min(96vw, 88rem);
+  aspect-ratio: 16 / 9;
+  min-height: min(84vh, 44rem);
+  overflow: hidden;
+  border: 1px solid var(--cp-border);
+  border-radius: 16px;
+  background:
+    radial-gradient(circle at 82% 18%, var(--cp-highlight), var(--cp-panel) 24rem),
+    linear-gradient(140deg, var(--cp-panel-strong), var(--cp-panel));
+  box-shadow: var(--cp-shadow);
+  padding: clamp(2rem, 3.1vw, 4rem);
+}
+.slide.active { display: flex; flex-direction: column; }
+.slide::before {
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: .45rem;
+  background: var(--cp-accent);
+}
+.slide::after {
+  content: attr(data-section);
+  position: absolute;
+  top: 1.25rem;
+  right: 1.5rem;
+  color: var(--cp-text-muted);
+  font-size: .78rem;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+}
+.title-slide {
+  background:
+    radial-gradient(circle at 78% 24%, var(--cp-highlight), var(--cp-bg-elevated) 24rem),
+    linear-gradient(135deg, var(--cp-surface), var(--cp-bg-elevated));
+}
+.kicker {
+  display: inline-flex;
+  align-items: center;
+  gap: .5rem;
+  align-self: flex-start;
+  margin-bottom: 1.2rem;
+  padding: .32rem .7rem;
+  border: 1px solid var(--cp-border);
+  border-radius: 999px;
+  background: var(--cp-accent-soft);
+  color: var(--cp-accent);
+  font-size: .82rem;
+  font-weight: 800;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+h1, h2, h3, p { margin: 0; }
+h1 {
+  max-width: 13ch;
+  font-size: clamp(3.45rem, 7vw, 7.2rem);
+  line-height: .92;
+  letter-spacing: -.06em;
+}
+h2 {
+  max-width: 22ch;
+  font-size: clamp(2.3rem, 4.45vw, 4.85rem);
+  line-height: .96;
+  letter-spacing: -.05em;
+}
+h3 {
+  font-size: clamp(1.15rem, 1.8vw, 1.65rem);
+  line-height: 1.1;
+}
+.lead {
+  max-width: 50rem;
+  margin-top: 1.1rem;
+  color: var(--cp-text-muted);
+  font-size: clamp(1.1rem, 1.75vw, 1.55rem);
+  line-height: 1.35;
+}
+.small { color: var(--cp-text-muted); font-size: .9rem; }
+
+.layout {
+  flex: 1;
+  display: grid;
+  gap: 2rem;
+  align-items: center;
+}
+.two { grid-template-columns: minmax(0, 1.05fr) minmax(0, .95fr); }
+.two-wide { grid-template-columns: minmax(0, 1.25fr) minmax(0, .75fr); }
+.three { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1rem; }
+.four { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 1rem; }
+.stack { display: grid; gap: .9rem; }
+
+.card {
+  border: 1px solid var(--cp-border);
+  border-radius: 16px;
+  background: var(--cp-surface);
+  padding: 1.05rem;
+  box-shadow: 0 0 2px var(--cp-border), 0 1px 2px var(--cp-border);
+}
+.card.strong { border-color: var(--cp-border-strong); background: var(--cp-panel-strong); }
+.card.soft { background: var(--cp-surface-soft); }
+.card.hot { border-color: var(--cp-warning); background: var(--cp-highlight); }
+.card h3 { margin-bottom: .5rem; }
+.card p, .card li { color: var(--cp-text-muted); line-height: 1.38; }
+.card ul { margin: .7rem 0 0; padding-left: 1.05rem; }
+.card li { margin: .28rem 0; }
+.card .tag {
+  display: inline-block;
+  margin-bottom: .7rem;
+  color: var(--cp-accent);
+  font-size: .78rem;
+  font-weight: 800;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+}
+
+.pill-row { display: flex; flex-wrap: wrap; gap: .55rem; margin-top: 1.2rem; }
+.pill {
+  display: inline-flex;
+  align-items: center;
+  padding: .42rem .68rem;
+  border: 1px solid var(--cp-border);
+  border-radius: 999px;
+  background: var(--cp-surface-soft);
+  color: var(--cp-text-muted);
+  font-size: .88rem;
+}
+.pill.primary { background: var(--cp-accent); color: var(--cp-accent-fg); border-color: var(--cp-accent); }
+
+.metric-row { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .85rem; margin-top: 1.25rem; }
+.metric-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: .9rem; }
+.slide > .three,
+.slide > .four,
+.slide > .timeline,
+.slide > .architecture,
+.slide > .metric-grid,
+.slide > .source-list {
+  margin-top: clamp(1.35rem, 2vw, 2rem);
+}
+.slide > .flow,
+.slide > .flow-summary,
+.slide > .result-flow {
+  margin-top: clamp(1.1rem, 1.6vw, 1.7rem);
+}
+.slide[data-title="Architecture"] > .architecture,
+.slide[data-title="Lifecycle control map"] > .timeline,
+.slide[data-title="Demo operating cycle"] > .three,
+.slide[data-title="Flexibility"] > .four,
+.slide[data-title="Intent to plan"] > .timeline,
+.slide[data-title="Execution to evidence"] > .timeline {
+  margin-top: clamp(1.6rem, 2.4vw, 2.4rem);
+}
+.slide[data-title="Lifecycle control map"] > .flow-summary,
+.slide[data-title="Demo operating cycle"] > .flow-summary,
+.slide[data-title="Intent to plan"] > .flow-summary,
+.slide[data-title="Execution to evidence"] > .evidence {
+  margin-top: clamp(1.1rem, 1.6vw, 1.6rem);
+}
+.metric {
+  min-height: 9rem;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+.metric .num {
+  color: var(--cp-accent);
+  font-size: clamp(2.45rem, 4.8vw, 5.1rem);
+  font-weight: 900;
+  line-height: .9;
+  letter-spacing: -.06em;
+}
+
+.flow { display: grid; gap: .75rem; }
+.flow-line {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: .8rem;
+}
+.node {
+  min-height: 4.2rem;
+  border: 1px solid var(--cp-border);
+  border-radius: 0.625rem;
+  background: var(--cp-surface);
+  padding: .82rem .95rem;
+}
+.node strong { display: block; margin-bottom: .2rem; }
+.node span { color: var(--cp-text-muted); font-size: .9rem; }
+.arrow { color: var(--cp-accent); font-size: 1.55rem; font-weight: 800; }
+
+.timeline { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: .8rem; }
+.step { min-height: 11.2rem; }
+.count {
+  display: inline-grid;
+  place-items: center;
+  width: 2rem;
+  height: 2rem;
+  margin-bottom: .75rem;
+  border-radius: 999px;
+  background: var(--cp-accent);
+  color: var(--cp-accent-fg);
+  font-weight: 900;
+}
+.architecture { display: grid; grid-template-columns: 1fr .9fr 1fr; gap: 1rem; align-items: stretch; }
+.lane {
+  border: 1px solid var(--cp-border);
+  border-radius: 16px;
+  background: var(--cp-surface);
+  padding: 1rem;
+}
+.lane-title {
+  margin-bottom: .85rem;
+  color: var(--cp-accent);
+  font-size: .78rem;
+  font-weight: 900;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+.lane .node { margin-bottom: .65rem; }
+
+/* persistent part label in slide chrome (top-right badge) */
+.slide[data-part]::after { content: attr(data-part); color: var(--cp-accent); font-weight: 800; }
+
+/* persona levels: crimson = organization-level (set up once), blue = project-level (repeats) */
+.step.org { box-shadow: inset 0 .35rem 0 var(--cp-accent), 0 0 2px var(--cp-border), 0 1px 2px var(--cp-border); }
+.step.proj { box-shadow: inset 0 .35rem 0 var(--cp-proj), 0 0 2px var(--cp-border), 0 1px 2px var(--cp-border); }
+.proj .count { background: var(--cp-proj); color: var(--cp-proj-fg); }
+
+/* persona flow strip: one-time setup vs per-project loop */
+.persona-flow { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: .8rem; }
+.pf-group {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: .5rem;
+  border: 1px solid var(--cp-border);
+  border-radius: 16px;
+  padding: .7rem 1rem;
+}
+.pf-group.org { grid-column: 1 / 3; background: var(--cp-accent-soft); border-color: var(--cp-accent); }
+.pf-group.proj { grid-column: 3 / 6; background: var(--cp-proj-soft); border-color: var(--cp-proj); }
+.pf-label { flex-basis: 100%; font-size: .72rem; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
+.pf-group.org .pf-label { color: var(--cp-accent); }
+.pf-group.proj .pf-label { color: var(--cp-proj); }
+.pf-node {
+  border: 1px solid var(--cp-border);
+  border-radius: 999px;
+  background: var(--cp-surface);
+  padding: .3rem .68rem;
+  color: var(--cp-text-muted);
+  font-size: .86rem;
+  white-space: nowrap;
+}
+.pf-arrow { font-weight: 800; }
+.pf-group.org .pf-arrow { color: var(--cp-accent); }
+.pf-group.proj .pf-arrow { color: var(--cp-proj); }
+.slide > .persona-flow { margin-top: clamp(1.1rem, 1.6vw, 1.7rem); }
+
+/* persona ownership chip (below the top-right part label) */
+.persona-badge {
+  position: absolute;
+  top: 3rem;
+  right: 1.5rem;
+  color: var(--cp-accent);
+  font-size: .74rem;
+  font-weight: 800;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+}
+.persona-badge::before { content: "persona · "; color: var(--cp-text-muted); font-weight: 700; }
+.persona-badge.proj { color: var(--cp-proj); }
+
+/* divider / section-break slides */
+.slide.divider { justify-content: center; gap: .55rem; }
+.slide.divider .part-index {
+  align-self: flex-start;
+  color: var(--cp-text-muted);
+  font-size: clamp(.95rem, 1.3vw, 1.15rem);
+  font-weight: 900;
+  letter-spacing: .18em;
+  text-transform: uppercase;
+}
+.slide.divider h2 { max-width: 20ch; font-size: clamp(2.9rem, 5.6vw, 5.8rem); }
+.slide.divider .lead { max-width: 46rem; margin-top: 1.4rem; }
+
+/* harness .github/ file-tree */
+.filetree {
+  border: 1px solid var(--cp-border-strong);
+  border-radius: 16px;
+  background: var(--cp-surface);
+  padding: 1.1rem 1.3rem;
+  font-family: Consolas, "Courier New", Courier, monospace;
+  font-size: clamp(.86rem, 1.15vw, 1.02rem);
+  line-height: 1.65;
+}
+.filetree .froot { color: var(--cp-text); font-weight: 700; }
+.filetree .frow { display: flex; justify-content: space-between; gap: 1.2rem; padding-left: 1.4rem; }
+.filetree .fdir { color: var(--cp-accent); font-weight: 700; }
+.filetree .fnote { color: var(--cp-text-soft); text-align: right; }
+
+/* architecture color coding: reusable harness vs demo-specific */
+.node.harness { border-color: var(--cp-accent); box-shadow: inset .3rem 0 0 var(--cp-accent); }
+.node.usecase { border-color: var(--cp-border-strong); box-shadow: inset .3rem 0 0 var(--cp-border-strong); }
+.arch-legend { display: flex; flex-wrap: wrap; gap: 1.4rem; margin-top: .95rem; color: var(--cp-text-muted); font-size: .92rem; }
+.arch-legend span { display: inline-flex; align-items: center; gap: .5rem; }
+.dot { width: .72rem; height: .72rem; border-radius: 999px; display: inline-block; }
+.dot.harness { background: var(--cp-accent); }
+.dot.usecase { background: var(--cp-border-strong); }
+
+/* evidence metrics strip (merged validation proof) */
+.evidence { display: flex; flex-wrap: wrap; gap: .6rem; }
+.evidence .stat {
+  flex: 1 1 0;
+  min-width: 8rem;
+  border: 1px solid var(--cp-border);
+  border-radius: .625rem;
+  background: var(--cp-surface-soft);
+  padding: .6rem .85rem;
+}
+.evidence .stat b {
+  display: block;
+  color: var(--cp-accent);
+  font-size: clamp(1.5rem, 2.5vw, 2.1rem);
+  font-weight: 900;
+  line-height: 1;
+  letter-spacing: -.04em;
+}
+.evidence .stat span { color: var(--cp-text-muted); font-size: .82rem; }
+
+/* community-framework strip: one labelled group per category */
+.fw-title { margin-bottom: .55rem; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; font-size: .74rem; }
+.fw-groups { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 1rem; }
+.fw-groups > div { border-left: 2px solid var(--cp-accent-soft); padding-left: .7rem; }
+.fw-groups span {
+  display: block;
+  margin-bottom: .3rem;
+  color: var(--cp-accent);
+  font-size: .72rem;
+  font-weight: 800;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+}
+.fw-groups p { margin: 0; line-height: 1.4; }
+
+.source-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .5rem; margin-top: 1rem; }
+.source-list a {
+  display: block;
+  padding: .5rem .85rem;
+  border: 1px solid var(--cp-border);
+  border-radius: 0.625rem;
+  background: var(--cp-surface);
+  text-decoration: none;
+}
+.source-list span { display: block; margin-top: .15rem; color: var(--cp-text-muted); font-size: .84rem; }
+.footer {
+  position: absolute;
+  left: clamp(2rem, 3.1vw, 4rem);
+  right: clamp(2rem, 3.1vw, 4rem);
+  bottom: 1.15rem;
+  display: flex;
+  justify-content: space-between;
+  color: var(--cp-text-muted);
+  font-size: .82rem;
+}
+.notes { display: none; }
+.presenter-notes {
+  position: fixed;
+  z-index: 5;
+  left: 2rem;
+  right: 2rem;
+  bottom: 4.5rem;
+  display: none;
+  max-width: 72rem;
+  margin: 0 auto;
+  border: 1px solid var(--cp-border-strong);
+  border-radius: 16px;
+  background: var(--cp-panel-strong);
+  color: var(--cp-text);
+  box-shadow: var(--cp-shadow);
+  padding: 1rem 1.2rem;
+  line-height: 1.45;
+}
+body.show-notes .presenter-notes { display: block; }
+.presenter-notes strong { color: var(--cp-accent); }
+.nav {
+  position: fixed;
+  z-index: 6;
+  right: 1.5rem;
+  bottom: 1.1rem;
+  display: flex;
+  gap: .75rem;
+  align-items: center;
+  padding: .55rem .75rem;
+  border: 1px solid var(--cp-border);
+  border-radius: 999px;
+  background: var(--cp-panel-strong);
+  color: var(--cp-text-muted);
+  box-shadow: 0 0 2px var(--cp-border), 0 1px 2px var(--cp-border);
+  font-size: .86rem;
+}
+.nav button {
+  border: 0;
+  border-radius: 999px;
+  padding: .2rem .55rem;
+  background: var(--cp-accent);
+  color: var(--cp-accent-fg);
+  cursor: pointer;
+}
+.overview {
+  position: fixed;
+  inset: 0;
+  z-index: 10;
+  display: none;
+  overflow: auto;
+  padding: 2rem;
+  background: var(--cp-overlay);
+}
+body.show-overview .overview { display: block; }
+.overview-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(17rem, 1fr));
+  gap: 1rem;
+}
+.thumb {
+  min-height: 7.4rem;
+  border: 1px solid var(--cp-border);
+  border-radius: 16px;
+  background: var(--cp-panel-strong);
+  padding: 1rem;
+  cursor: pointer;
+}
+.thumb strong { display: block; margin-bottom: .35rem; }
+.thumb span { color: var(--cp-text-muted); font-size: .86rem; }
+@media (max-width: 900px) {
+  body { overflow: auto; }
+  .deck { height: auto; min-height: 100vh; padding: 1rem; }
+  .slide { width: 100%; min-height: auto; aspect-ratio: auto; padding: 1.5rem 1.4rem 4rem; }
+  .two, .two-wide, .three, .four, .timeline, .architecture, .metric-row, .metric-grid, .fw-groups, .persona-flow { grid-template-columns: 1fr; }
+  .pf-group.org, .pf-group.proj { grid-column: auto; }
+  .flow-line { grid-template-columns: 1fr; }
+  .arrow { transform: rotate(90deg); justify-self: center; }
+}
+</style>
+</head>
+<body>
+<main class="deck" id="deck">
+  <section class="slide active title-slide" data-section="opening" data-title="Agentic SDLC in practice">
+    <div>
+      <div class="kicker">Agentic SDLC in practice</div>
+      <h1>Agentic Software Development Lifecycle</h1>
+      <p class="lead">From a workplace request to governed, agent-built, deployed software. The demo is the example; the harness is the reusable product.</p>
+      <p class="small" style="margin-top:1.6rem;">Özgür Karahan · July 2026</p>
+    </div>
+    <aside class="notes"><strong>Opening.</strong> Keep it minimal. The World Cup agent is the vehicle; the lifecycle and harness are the reusable pattern. Numbers if asked: 1 Work IQ intake, 1 validated harness, 21 live E2E passed.</aside>
+    <div class="footer"><span>Agentic SDLC</span><span>Use arrows · N notes · O overview</span></div>
+  </section>
+
+  <section class="slide" data-section="market shift" data-title="Market shift">
+    <div class="kicker">Market shift</div>
+    <h2>Agents in the SDLC are now shipping products, not experiments.</h2>
+    <div class="four">
+      <div class="card"><span class="tag">Microsoft · GitHub</span><h3>Copilot agents + Agent HQ</h3><p>Assign an Issue; the Copilot cloud agent opens a branch and PR behind required checks. Agent HQ brings third-party agents (Claude, Codex) into GitHub.</p></div>
+      <div class="card"><span class="tag">Anthropic</span><h3>Claude Code + Agent SDK</h3><p>Terminal-native agentic coding with plan, test, and PR workflows; GitHub Actions integration; an SDK to build custom agents on the same harness.</p></div>
+      <div class="card"><span class="tag">OpenAI · Google</span><h3>Codex · Jules</h3><p>Cloud software-engineering agents that clone the repo into a sandbox, write code, run tests, and open pull requests asynchronously.</p></div>
+      <div class="card"><span class="tag">AWS · others</span><h3>Kiro, Devin, Rovo Dev…</h3><p>Kiro makes spec-driven agentic development an IDE; Cognition Devin, Cursor cloud agents, Atlassian Rovo Dev, and JetBrains Junie ship the same shift.</p></div>
+    </div>
+    <div class="card soft flow-summary">
+      <p class="small fw-title">community frameworks &amp; methods — many, none standard</p>
+      <div class="fw-groups">
+        <div><span>Spec-driven</span><p class="mono small">Spec&nbsp;Kit · OpenSpec · Agent&nbsp;OS</p></div>
+        <div><span>Persona squads</span><p class="mono small">BMad&nbsp;Method · Squad · DevSquad · HVE&nbsp;Core</p></div>
+        <div><span>Research frameworks</span><p class="mono small">MetaGPT · ChatDev</p></div>
+        <div><span>Coding agents</span><p class="mono small">OpenHands · SWE-agent · Aider</p></div>
+        <div><span>Orchestration &amp; loops</span><p class="mono small">Task&nbsp;Master · Claude&nbsp;Squad · Conductor · Ralph&nbsp;loop</p></div>
+      </div>
+    </div>
+    <aside class="notes"><strong>Market shift.</strong> Every major vendor now ships agents that work inside the SDLC record: GitHub Copilot cloud agent + Agent HQ (Claude and Codex in public preview on GitHub since Feb 2026), Anthropic Claude Code + Agent SDK, OpenAI Codex, Google Jules, AWS Kiro (spec-driven; Q Developer retiring in its favor), Cognition Devin, Cursor cloud agents, Atlassian Rovo Dev, JetBrains Junie. The small strip is deliberate: the community framework list is long and unranked — the point is that many exist, not which one is best. Links on the Sources slide. Close verbally with the bridge: "So the question is not whether agents can write code. It is whether the harness makes their work scoped, reviewable, tested, and traceable."</aside>
+    <div class="footer"><span>Assistance to orchestration</span><span>market shift</span></div>
+  </section>
+
+  <section class="slide" data-section="positioning" data-title="Where you take over">
+    <div class="kicker">Market shift · positioning</div>
+    <h2>Same shape everywhere — and a shared hand-over point.</h2>
+    <div class="layout two">
+      <div class="stack">
+        <div class="card"><span class="tag">Converged patterns</span><h3>What they all share</h3><ul>
+          <li>Role personas mapped to SDLC stages.</li>
+          <li>Phased, artifact-driven workflow: spec → plan → stories.</li>
+          <li>File artifacts as memory; git as traceability.</li>
+          <li>Human gates keyed to risk or impact.</li>
+          <li>An orchestrator delegating to parallel workers.</li>
+        </ul></div>
+      </div>
+      <div class="stack">
+        <div class="card hot"><span class="tag">Where the adopting team takes over</span><h3>Their scope ends around the merge</h3><ul>
+          <li>Methods describe tests and quality steps in files; turning them into platform-enforced required checks is up to each team.</li>
+          <li>Vendor agents deliver well-checked PRs; the deploy stage — environments, smoke tests, rollback — is wired by the adopter.</li>
+          <li>Feeding runtime evidence back into new work items is usually a manual loop.</li>
+          <li>Round-trips with PM tools (Jira, Azure Boards) vary by vendor and setup.</li>
+        </ul></div>
+      </div>
+    </div>
+    <p class="lead">This harness packages exactly that remaining wiring: enforcement first, deploy as a governed stage, and live evidence closing the loop.</p>
+    <aside class="notes"><strong>Positioning.</strong> Tone: descriptive, not critical — these tools scope themselves to the path up to the merge, which is legitimate. The sentence to land: what remains for every adopting team — enforcement wiring, the deploy stage, the live-evidence loop, the PM round-trip — is exactly what this harness packages, and exactly what Part 1 shows.</aside>
+    <div class="footer"><span>Enforcement first, deploy owned, evidence live</span><span>positioning</span></div>
+  </section>
+
+  <section class="slide" data-section="market shift · so what" data-title="The open question">
+    <div class="kicker">Market shift · so what</div>
+    <h2>Agents can write code. The open question is governance.</h2>
+    <div class="three">
+      <div class="card"><span class="tag">The shift</span><h3>Agents now ship inside the SDLC</h3><p>Every major vendor ships coding agents that open branches and pull requests; community methods add personas and phased plans on top.</p></div>
+      <div class="card hot"><span class="tag">The remaining work</span><h3>The last mile is wired by each team</h3><p>Most approaches scope themselves up to the merge; platform enforcement, the deploy stage, and live validation are left for each team to wire.</p></div>
+      <div class="card strong"><span class="tag">The answer shown here</span><h3>A harness that starts there</h3><p>A reusable, GitHub-native harness — enforcement wired first, deploy as a governed stage, live evidence closing the loop — proven end to end on a small real agent.</p></div>
+    </div>
+    <p class="lead">The question is no longer whether agents can write code. It is whether the harness makes their work scoped, reviewable, tested, and traceable.</p>
+    <aside class="notes"><strong>The pivot.</strong> Synthesis of the market story and the bridge into Part 1: land the bottom sentence, then move. For PDF readers this slide doubles as the executive summary — shift, remaining work, answer.</aside>
+    <div class="footer"><span>Shift · remaining work · governed answer</span><span>the pivot</span></div>
+  </section>
+
+  <section class="slide divider" data-section="part 1 of 2" data-title="Part 1 — Foundation">
+    <div class="part-index">Part 1 of 2</div>
+    <div class="kicker">The foundation</div>
+    <h2>First, the reusable harness.</h2>
+    <p class="lead">Before any example, the durable product: a GitHub-native harness that turns a capable model into a dependable, governed agent. Everything in this part is reused for every project.</p>
+    <aside class="notes"><strong>Section break.</strong> Signal clearly that Part 1 is the reusable foundation. The example use case comes only in Part 2.</aside>
+    <div class="footer"><span>Part 1 · Foundation</span><span>the reusable harness</span></div>
+  </section>
+
+  <section class="slide" data-section="personas" data-title="Who does what" data-part="Part 1 · Foundation">
+    <div class="kicker">Foundation · five personas</div>
+    <h2>One harness, five personas.</h2>
+    <div class="timeline">
+      <div class="step card org"><span class="count">1</span><h3>Harness author</h3><p><strong>Builds and validates.</strong> Designs agents, skills, gates; proves every gate fires with the offline self-test rig.</p></div>
+      <div class="step card org"><span class="count">2</span><h3>Platform engineer</h3><p><strong>Templatizes in GitHub.</strong> Instantiates the template per repo and turns files into enforcement: rulesets, required checks, CODEOWNERS, environments.</p></div>
+      <div class="step card proj"><span class="count">3</span><h3>PM / Business owner</h3><p><strong>Creates the inputs.</strong> Turns meetings and team recaps into intents and work units — the Jira-style backlog the harness consumes.</p></div>
+      <div class="step card proj"><span class="count">4</span><h3>Validator / Approver</h3><p><strong>Owns the human gates.</strong> Validates and prioritizes issues, approves the plan before code, reviews PRs, approves deploys — three hard stops.</p></div>
+      <div class="step card proj"><span class="count">5</span><h3>Project team</h3><p><strong>Runs inside the guardrails.</strong> Uses the harness daily: agents implement, engineers review, evidence accumulates.</p></div>
+    </div>
+    <div class="persona-flow">
+      <div class="pf-group org">
+        <span class="pf-label">Organization · set up once</span>
+        <span class="pf-node">author the harness</span><span class="pf-arrow">→</span><span class="pf-node">templatize &amp; enforce</span>
+      </div>
+      <div class="pf-group proj">
+        <span class="pf-label">Every project ↻</span>
+        <span class="pf-node">intent</span><span class="pf-arrow">→</span><span class="pf-node">validated plan</span><span class="pf-arrow">→</span><span class="pf-node">governed execution</span><span class="pf-arrow">→</span><span class="pf-node">approved release</span>
+      </div>
+    </div>
+    <aside class="notes"><strong>Personas.</strong> This is the narrative spine of the whole talk. Colors carry the split: crimson personas 1–2 act once per organization/repo (Part 1); blue personas 3–5 repeat for every project (Part 2). The strip below mirrors it — one-time setup on the left, the repeating project loop on the right. Each following slide carries a persona chip in the top-right showing who owns it.</aside>
+    <div class="footer"><span>2 set up once · 3 run every project</span><span>personas</span></div>
+  </section>
+
+  <section class="slide" data-section="the harness" data-title="The harness" data-part="Part 1 · Foundation">
+    <div class="persona-badge">Harness author</div>
+    <div class="layout two">
+      <div>
+        <div class="kicker">Foundation · the harness</div>
+        <h2>Agent = model + harness.</h2>
+        <p class="lead">The model gives capability. The harness gives the rules, context, tools, gates, memory, and observability that make an agent dependable, and it reaches any system through APIs and MCP.</p>
+        <div class="pill-row">
+          <span class="pill">context</span>
+          <span class="pill">rules</span>
+          <span class="pill">tools · MCP</span>
+          <span class="pill">gates</span>
+          <span class="pill">memory</span>
+          <span class="pill">observability</span>
+        </div>
+      </div>
+      <div class="filetree">
+        <div class="froot">.github/</div>
+        <div class="frow"><span class="fdir">agents/</span><span class="fnote">8 lifecycle roles</span></div>
+        <div class="frow"><span class="fdir">skills/</span><span class="fnote">7 reusable skills</span></div>
+        <div class="frow"><span class="fdir">prompts/</span><span class="fnote">3 procedures</span></div>
+        <div class="frow"><span class="fdir">workflows/</span><span class="fnote">4 required gates</span></div>
+        <div class="frow"><span class="fdir">instructions/</span><span class="fnote">agent-safety overlay</span></div>
+        <div class="frow"><span class="fdir">ISSUE_TEMPLATE/</span><span class="fnote">work-unit intake</span></div>
+        <div class="frow"><span class="fdir">CODEOWNERS</span><span class="fnote">review ownership</span></div>
+        <div class="froot" style="margin-top:.55rem;">AGENTS.md <span class="fnote">(repo-root static context)</span></div>
+      </div>
+    </div>
+    <aside class="notes"><strong>Foundation.</strong> "Agent equals model plus harness" is the core mental model. These are real, deployable files: copy them into a target repo's .github/ to stand up the pipeline.</aside>
+    <div class="footer"><span>Agent = Model + Harness</span><span>the harness</span></div>
+  </section>
+
+  <section class="slide" data-section="foundation ownership" data-title="Foundation ownership" data-part="Part 1 · Foundation">
+    <div class="persona-badge">Platform engineer</div>
+    <div class="layout two">
+      <div>
+        <div class="kicker">Foundation · who sets it up</div>
+        <h2>The platform engineer turns files into enforcement.</h2>
+        <p class="lead">This is a one-time, per-repo setup. Copying the harness files gives behavior; real governance only exists once the owner enforces it on GitHub. After that, every project reuses the same baseline.</p>
+        <div class="pill-row">
+          <span class="pill primary">set up once</span>
+          <span class="pill">enforce first</span>
+          <span class="pill">reused everywhere</span>
+        </div>
+      </div>
+      <div class="stack">
+        <div class="card strong"><h3>Rulesets &amp; branch protection</h3><p>No direct pushes to the default branch; changes arrive as reviewable PRs.</p></div>
+        <div class="card strong"><h3>Required checks + CODEOWNERS</h3><p>Tests, behaviour evaluations (evals), and security jobs are marked required; owners must review.</p></div>
+        <div class="card strong"><h3>Environments &amp; merge queue</h3><p>Protected deploys and safe fan-in, verified with the verify-gates skill.</p></div>
+      </div>
+    </div>
+    <aside class="notes"><strong>Foundation ownership.</strong> The load-bearing step: files alone enforce nothing. The platform engineer does this once per repo; the per-project roles in Part 2 then run inside these guardrails.</aside>
+    <div class="footer"><span>Enforce first, once per repo</span><span>foundation ownership</span></div>
+  </section>
+
+  <section class="slide" data-section="agents &amp; skills" data-title="Lifecycle control map" data-part="Part 1 · Foundation">
+    <div class="persona-badge">Harness author</div>
+    <div class="kicker">Foundation · agents, skills &amp; gates</div>
+    <h2>Every lifecycle step has an owner and a gate.</h2>
+    <div class="timeline">
+      <div class="step card"><span class="tag">Plan</span><h3>Planning agent</h3><p>Decomposes validated intent into a scoped work graph. Procedure: decompose-intent.</p></div>
+      <div class="step card"><span class="tag">Validate</span><h3>Rubber-Duck agent</h3><p>Adversarial plan review before any code. Gate: plan-lint. Procedure: validate-plan.</p></div>
+      <div class="step card"><span class="tag">Execute</span><h3>Orchestrator → Dev-fleet</h3><p>Dispatches each unit to a dev-fleet or Copilot cloud agent, one PR each.</p></div>
+      <div class="step card"><span class="tag">Review &amp; test</span><h3>Code-review + Quality-test</h3><p>Scoped review and behavior tests. Gate: tests-and-evals.</p></div>
+      <div class="step card"><span class="tag">Secure &amp; ship</span><h3>Security-compliance + Deployment</h3><p>Supply-chain and deploy control. Gates: security-gate, deploy.</p></div>
+    </div>
+    <div class="card soft flow-summary">
+      <p class="mono">skills: workspace-hygiene · workplace-intake · plan-to-issues · run-tests · check-deps · verify-gates · deploy · human hard stops: plan approval → PR merge → deploy</p>
+    </div>
+    <aside class="notes"><strong>Control map.</strong> Read left to right as a control map, not a catalog: each phase names the agent that owns it and the required check that gates it. The seven skills are the reusable actions those agents call. Machine gates enforce; three human hard stops decide: plan approval, PR merge, deploy.</aside>
+    <div class="footer"><span>8 agents · 7 skills · 4 required gates · 3 human stops</span><span>agents &amp; skills</span></div>
+  </section>
+
+  <section class="slide" data-section="extensibility" data-title="Flexibility" data-part="Part 1 · Foundation">
+    <div class="persona-badge">Platform engineer</div>
+    <div class="kicker">Flexibility &amp; customization</div>
+    <h2>The harness plugs into any system through APIs and MCP.</h2>
+    <div class="four">
+      <div class="card"><span class="tag">Context &amp; intake</span><h3>Where work starts</h3><p>Work IQ, Teams, email, meeting recaps, wikis.</p></div>
+      <div class="card"><span class="tag">Delivery &amp; tracking</span><h3>Where work lives</h3><p>GitHub Issues, Jira, Azure Boards.</p></div>
+      <div class="card"><span class="tag">Tools &amp; data</span><h3>What agents call</h3><p>Custom MCP servers, internal APIs, and databases.</p></div>
+      <div class="card"><span class="tag">Quality &amp; security</span><h3>What gates enforce</h3><p>Test runners, security scanners, and linters as required checks.</p></div>
+    </div>
+    <p class="lead">Nothing here is locked to one vendor or stack. Every rule and gate is templatized in GitHub, and every integration is a swappable API or MCP server.</p>
+    <aside class="notes"><strong>Flexibility.</strong> The key extensibility message: the harness is not a closed island — it governs work that reaches existing enterprise systems through open protocols.</aside>
+    <div class="footer"><span>Open by APIs &amp; MCP</span><span>flexibility</span></div>
+  </section>
+
+  <section class="slide divider" data-section="part 2 of 2" data-title="Part 2 — Demo">
+    <div class="part-index">Part 2 of 2</div>
+    <div class="kicker">The demo</div>
+    <h2>Now, one example use case.</h2>
+    <p class="lead">Everything that follows is a single example built to exercise the harness end to end. The reusable foundation stays the same; only the use-case-specific choices change.</p>
+    <aside class="notes"><strong>Section break.</strong> Make the pivot explicit: we are leaving the reusable foundation and entering a concrete demonstration.</aside>
+    <div class="footer"><span>Part 2 · Demo</span><span>one example use case</span></div>
+  </section>
+
+  <section class="slide" data-section="use case" data-title="Use case" data-part="Part 2 · Demo">
+    <div class="persona-badge proj">Project team</div>
+    <div class="layout two-wide">
+      <div>
+        <div class="kicker">Here is how I used it: an example</div>
+        <h2>World Cup Commentator</h2>
+        <p class="lead">A small Microsoft Foundry prompt agent (a declarative, served agent) used to prove the harness end-to-end: intake, planning, PR execution, grounding, guardrails, evals, and live validation.</p>
+        <div class="pill-row">
+          <span class="pill primary">prompt agent</span>
+          <span class="pill">existing model deployment</span>
+          <span class="pill">Web IQ grounding only</span>
+          <span class="pill">approval required</span>
+        </div>
+      </div>
+      <div class="card strong">
+        <h3>What the example proves</h3>
+        <ul>
+          <li>Work IQ can act as the governed workplace-intake layer for Teams context.</li>
+          <li>A Teams request can become structured lifecycle work.</li>
+          <li>The harness can add a governed tool connection without widening scope.</li>
+          <li>Runtime evidence can become scoped follow-up work.</li>
+          <li>Guardrails stay testable as the agent gains grounding.</li>
+        </ul>
+      </div>
+    </div>
+    <aside class="notes"><strong>Use case.</strong> It is small enough to understand, but rich enough to show grounding, safety, and lifecycle governance.</aside>
+    <div class="footer"><span>World Cup Commentator</span><span>use case</span></div>
+  </section>
+
+  <section class="slide" data-section="operating cycle" data-title="Demo operating cycle" data-part="Part 2 · Demo">
+    <div class="persona-badge proj">PM · Validator · Project team</div>
+    <div class="kicker">Demo · who runs the cycle</div>
+    <h2>Per project, three roles repeat and run in parallel.</h2>
+    <div class="three proj">
+      <div class="card"><span class="count">1</span><h3>PM / Business owner</h3><p><strong>Intent.</strong> Voices the need, spoken in a meeting or captured from a team-recap. Raw intent enters the system.</p></div>
+      <div class="card"><span class="count">2</span><h3>Validator / Approver</h3><p><strong>Triage gate.</strong> Turns messy intent into a clean, prioritized GitHub Issue or Jira item with acceptance criteria.</p></div>
+      <div class="card"><span class="count">3</span><h3>Project team + gates</h3><p><strong>Review gate.</strong> The Copilot agent executes; an engineer reviews the PR; required checks enforce test, quality, and security before merge.</p></div>
+    </div>
+    <div class="card soft flow-summary">
+      <p class="mono">intent → prioritized issue (acceptance criteria) → harness executes → PR + required checks → human review → merge → live evidence · repeatable per project, parallel across projects</p>
+    </div>
+    <aside class="notes"><strong>Operating cycle.</strong> These three roles run on top of the foundation from Part 1. The platform engineer set the guardrails once; this cycle repeats for every project and can run in parallel across many.</aside>
+    <div class="footer"><span>Repeatable, parallel per project</span><span>operating cycle</span></div>
+  </section>
+
+  <section class="slide" data-section="architecture" data-title="Architecture" data-part="Part 2 · Demo">
+    <div class="persona-badge proj">Project team</div>
+    <div class="kicker">Demo reference architecture</div>
+    <h2>How this example is wired.</h2>
+    <div class="architecture">
+      <div class="lane">
+        <div class="lane-title">Intake</div>
+        <div class="node usecase"><strong>Teams message</strong><span>request in any form</span></div>
+        <div class="node usecase"><strong>Work IQ</strong><span>optional M365 context</span></div>
+        <div class="node harness"><strong>Work-unit template</strong><span>standard intake format</span></div>
+      </div>
+      <div class="lane">
+        <div class="lane-title">Orchestration</div>
+        <div class="node harness"><strong>Planner</strong><span>questions → structured work units</span></div>
+        <div class="node harness"><strong>Rubber Duck</strong><span>adversarial validation</span></div>
+        <div class="node harness"><strong>Copilot cloud agent</strong><span>branch and PR per unit</span></div>
+      </div>
+      <div class="lane">
+        <div class="lane-title">Execution</div>
+        <div class="node harness"><strong>GitHub</strong><span>Issues, PRs, required checks</span></div>
+        <div class="node usecase"><strong>Foundry</strong><span>served prompt agent (this use case)</span></div>
+        <div class="node usecase"><strong>Web IQ (MCP)</strong><span>web-grounding tool (any MCP fits)</span></div>
+      </div>
+    </div>
+    <div class="arch-legend">
+      <span><span class="dot harness"></span> Reusable governance harness</span>
+      <span><span class="dot usecase"></span> Demo-specific implementation choices (swappable)</span>
+    </div>
+    <aside class="notes"><strong>Architecture.</strong> This is the demo's architecture, not the harness itself. Crimson is the reusable harness you keep for every project; gray is what this use case plugged in and would swap. Work IQ is one intake option, not required. Intent can arrive structured or not: the Planner normalizes it into a work unit by asking questions and filling the shared template.</aside>
+    <div class="footer"><span>Reusable harness vs use-case choices</span><span>architecture</span></div>
+  </section>
+
+  <section class="slide" data-section="demo · intent to plan" data-title="Intent to plan" data-part="Part 2 · Demo">
+    <div class="persona-badge proj">PM → Validator</div>
+    <div class="kicker">Demo walkthrough · 1 of 2</div>
+    <h2>From a Teams ask to a validated plan.</h2>
+    <div class="timeline">
+      <div class="step card"><span class="count">0</span><h3>Enforce first</h3><p>Ruleset, CODEOWNERS, required checks, and branch protection were live before any work.</p></div>
+      <div class="step card"><span class="count">1</span><h3>Intake</h3><p>A Teams request was captured with permission-aware context through Work IQ.</p></div>
+      <div class="step card"><span class="count">2</span><h3>Triage</h3><p>It became a clean, prioritized Issue with acceptance criteria.</p></div>
+      <div class="step card"><span class="count">3</span><h3>Plan</h3><p>The request became an approved grounding and work plan.</p></div>
+      <div class="step card"><span class="count">4</span><h3>Rubber Duck</h3><p>An adversarial verdict challenged the plan before code existed.</p></div>
+    </div>
+    <div class="card soft flow-summary">
+      <p class="mono">Teams intake → Work IQ context → prioritized issue → work plan → rubber-duck verdict</p>
+    </div>
+    <aside class="notes"><strong>Demo, part 1.</strong> The front half of the run: how messy intent became a scoped, validated unit of work.</aside>
+    <div class="footer"><span>Intent to plan</span><span>demo walkthrough</span></div>
+  </section>
+
+  <section class="slide" data-section="demo · execution to evidence" data-title="Execution to evidence" data-part="Part 2 · Demo">
+    <div class="persona-badge proj">Project team + Validator</div>
+    <div class="kicker">Demo walkthrough · 2 of 2</div>
+    <h2>From scoped PRs to live, grounded evidence.</h2>
+    <div class="timeline">
+      <div class="step card"><span class="count">1</span><h3>Implement</h3><p>The Copilot cloud agent landed scoped PRs, one per unit of work.</p></div>
+      <div class="step card"><span class="count">2</span><h3>Gate</h3><p>Required checks (tests, lint, security) had to pass before merge.</p></div>
+      <div class="step card"><span class="count">3</span><h3>Review</h3><p>An engineer reviewed and approved each PR.</p></div>
+      <div class="step card"><span class="count">4</span><h3>Register</h3><p>The Foundry prompt agent became the working served deployment.</p></div>
+      <div class="step card"><span class="count">5</span><h3>Validate</h3><p>Live E2E refined the harness until grounded behavior passed.</p></div>
+    </div>
+    <div class="evidence">
+      <div class="stat"><b>52</b><span>local tests · all green</span></div>
+      <div class="stat"><b>21</b><span>live E2E behaviours · all green</span></div>
+      <div class="stat"><b>4</b><span>runtime findings, shipped as scoped fix PRs</span></div>
+      <div class="stat"><b>1</b><span>PR per work unit · no unit exceeded its scope</span></div>
+    </div>
+    <aside class="notes"><strong>Demo, part 2.</strong> The run did not stop when a cloud PR opened. It followed merge, live validation, and follow-up harness fixes to completion. These numbers are the proof.</aside>
+    <div class="footer"><span>Execution to evidence</span><span>demo walkthrough</span></div>
+  </section>
+
+  <section class="slide" data-section="takeaway" data-title="Takeaway">
+    <div class="layout two-wide">
+      <div>
+        <div class="kicker">Takeaway</div>
+        <h2>Start small, build the operating system.</h2>
+        <p class="lead">The World Cup agent is small by design. The reusable pattern is workplace intake, validated planning, GitHub-native governance, evals, live evidence, and controlled runtime registration.</p>
+      </div>
+      <div class="stack">
+        <div class="card strong"><h3>Keep</h3><p>Work IQ intake, enforce-first governance, issue-driven work, agent progress observable from PR status, evals, and human gates.</p></div>
+        <div class="card strong"><h3>Scale</h3><p>Apply the same harness, and the same API and MCP connectors, to support, SRE, migration, DevOps, and customer-facing agents.</p></div>
+        <div class="card strong"><h3>Remember</h3><p>Most agent failures are harness failures: unclear rules, missing tools, weak evals, or no enforcement.</p></div>
+      </div>
+    </div>
+    <aside class="notes"><strong>Close.</strong> End with the operating-system framing: the agent is the demo artifact, the SDLC factory is the reusable product.</aside>
+    <div class="footer"><span>From demo to platform pattern</span><span>takeaway</span></div>
+  </section>
+
+  <section class="slide" data-section="next steps" data-title="Next steps">
+    <div class="kicker">Next steps</div>
+    <h2>A concrete path to try this on your stack.</h2>
+    <div class="three">
+      <div class="card strong"><span class="count">1</span><h3>Scoping workshop</h3><p>Half a day: map your SDLC, PM tools (Jira, Azure Boards), and approval points onto the five personas and four gates.</p></div>
+      <div class="card strong"><span class="count">2</span><h3>Pilot on one repo</h3><p>Instantiate the harness template on one of your repositories and run one real, low-risk use case through the full lifecycle.</p></div>
+      <div class="card strong"><span class="count">3</span><h3>Review &amp; scale</h3><p>Review the evidence together — PRs, gate logs, live validation — and decide which teams and use cases onboard next.</p></div>
+    </div>
+    <p class="lead">Everything shown is templatized: the pilot starts from the same files demonstrated in Part 1, on your repositories and your PM tools.</p>
+    <aside class="notes"><strong>Next steps.</strong> The ask: agree on the pilot repo and use case. The workshop output is the persona-and-gate mapping; the pilot output is the evidence that drives the scale decision.</aside>
+    <div class="footer"><span>Workshop → pilot → scale</span><span>next steps</span></div>
+  </section>
+
+  <section class="slide" data-section="sources" data-title="Sources">
+    <div class="kicker">Sources</div>
+    <h2>References for follow-up.</h2>
+    <div class="source-list">
+      <a href="https://docs.github.com/en/copilot/how-tos/copilot-on-github/use-copilot-agents/overview">GitHub Docs: Copilot agents on GitHub<span>Assign Issues to Copilot, monitor sessions, request code review, iterate through PRs.</span></a>
+      <a href="https://github.blog/news-insights/company-news/welcome-home-agents/">GitHub Agent HQ<span>Third-party coding agents (Claude, Codex) running natively inside GitHub.</span></a>
+      <a href="https://github.com/microsoft/devsquad-copilot">Microsoft DevSquad Copilot<span>Reference implementation and patterns for Copilot-powered development squads.</span></a>
+      <a href="https://github.com/bmad-code-org/BMAD-METHOD">BMad Method<span>Agile persona-agent methodology: Analyst → PM → Architect → SM → Dev → QA, artifact-driven.</span></a>
+      <a href="https://github.com/bradygaster/squad">Squad<span>Human-led AI agent teams as repo files: rosters, decision logs, approval gates, watch mode.</span></a>
+      <a href="https://github.com/github/spec-kit">GitHub Spec Kit<span>Spec-driven development: constitution → spec → plan → tasks → implement; 30+ agent integrations.</span></a>
+      <a href="https://docs.github.com/en/copilot/how-tos/copilot-cli/customize-copilot/create-custom-agents-for-cli">GitHub Docs: Copilot CLI custom agents<span>Custom `.agent.md` profiles and subagent execution model.</span></a>
+      <a href="https://devblogs.microsoft.com/ise/accelerating-ai-development-with-github-copilot-real-world-use-cases/">Microsoft ISE: GitHub Copilot real-world use cases<span>Agent Mode used to create, test, and validate engineering artifacts.</span></a>
+      <a href="https://learn.microsoft.com/en-us/microsoft-365/copilot/extensibility/work-iq/">Microsoft Learn: Work IQ overview<span>Workplace intelligence, context, tools, governance, A2A/MCP/REST.</span></a>
+      <a href="https://learn.microsoft.com/en-us/azure/foundry/agents/overview">Microsoft Learn: Foundry Agent Service<span>Prompt agents, Hosted agents, Responses API, tools, identity, observability.</span></a>
+      <a href="https://learn.microsoft.com/en-us/azure/foundry/agents/how-to/tools/bing-tools">Microsoft Learn: Grounding with Bing Search tools<span>Path for public web grounding when the agent needs current external information.</span></a>
+    </div>
+    <aside class="notes"><strong>Sources.</strong> Use this as a leave-behind or appendix.</aside>
+    <div class="footer"><span>Official references</span><span>sources</span></div>
+  </section>
+</main>
+
+<aside class="presenter-notes" id="presenterNotes"></aside>
+<div class="nav">
+  <button type="button" id="prevBtn">←</button>
+  <span><span id="slideNo">1</span>/<span id="slideTotal">19</span></span>
+  <button type="button" id="nextBtn">→</button>
+</div>
+<div class="overview" id="overview" aria-hidden="true">
+  <div class="overview-grid" id="overviewGrid"></div>
+</div>
+
+<script>
+(() => {
+  const slides = [...document.querySelectorAll(".slide")];
+  const notes = document.getElementById("presenterNotes");
+  const slideNo = document.getElementById("slideNo");
+  const slideTotal = document.getElementById("slideTotal");
+  const overview = document.getElementById("overview");
+  const overviewGrid = document.getElementById("overviewGrid");
+  let index = 0;
+
+  slideTotal.textContent = String(slides.length);
+
+  function setActive(next) {
+    slides[index].classList.remove("active");
+    index = Math.max(0, Math.min(slides.length - 1, next));
+    slides[index].classList.add("active");
+    slideNo.textContent = String(index + 1);
+    const currentNotes = slides[index].querySelector(".notes");
+    notes.innerHTML = currentNotes ? currentNotes.innerHTML : "";
+    location.hash = `slide-${index + 1}`;
+  }
+
+  function move(delta) {
+    setActive(index + delta);
+  }
+
+  function toggleOverview(force) {
+    const shouldShow = force ?? !document.body.classList.contains("show-overview");
+    document.body.classList.toggle("show-overview", shouldShow);
+    overview.setAttribute("aria-hidden", shouldShow ? "false" : "true");
+  }
+
+  overviewGrid.innerHTML = slides.map((slide, i) => `
+    <div class="thumb" role="button" tabindex="0" data-i="${i}">
+      <strong>${slide.dataset.title || `Slide ${i + 1}`}</strong>
+      <span>${slide.dataset.section || ""}</span>
+    </div>
+  `).join("");
+
+  overviewGrid.addEventListener("click", event => {
+    const thumb = event.target.closest(".thumb");
+    if (!thumb) return;
+    setActive(Number(thumb.dataset.i));
+    toggleOverview(false);
+  });
+
+  document.getElementById("prevBtn").addEventListener("click", () => move(-1));
+  document.getElementById("nextBtn").addEventListener("click", () => move(1));
+
+  window.addEventListener("keydown", event => {
+    if (event.key === "ArrowRight" || event.key === "PageDown" || event.key === " ") move(1);
+    if (event.key === "ArrowLeft" || event.key === "PageUp") move(-1);
+    if (event.key.toLowerCase() === "n") document.body.classList.toggle("show-notes");
+    if (event.key.toLowerCase() === "o") toggleOverview();
+    if (event.key.toLowerCase() === "f" && document.documentElement.requestFullscreen) {
+      document.documentElement.requestFullscreen();
+    }
+    if (event.key === "Escape") toggleOverview(false);
+  });
+
+  const match = location.hash.match(/slide-(\d+)/);
+  if (match) setActive(Number(match[1]) - 1);
+  else setActive(0);
+})();
+</script>
+</body>
+</html>

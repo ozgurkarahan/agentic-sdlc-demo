@@ -38,8 +38,9 @@ tasks/
 # (kept on disk for running the improvement loop; NOT published to the public repo)
 _internal/
 
-# Presenter slide decks — local-only, NOT published to the public repo
-slides/
+# Presenter slide decks at the repo root are local-only (drafts / scratch).
+# The published deck lives at docs/slides/ and IS tracked.
+/slides/
 
 # Common language ignores (uncomment as needed per project)
 # Python
