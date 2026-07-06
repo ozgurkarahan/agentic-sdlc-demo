@@ -45,8 +45,9 @@ param(
     'Evals (trajectory + rubric)',
     'Path-scope (fleet lane check)',
     'Dependency review (supply-chain)',
-    'CodeQL (code scanning) (javascript-typescript)',
-    'Hallucinated-dependency / slopsquatting check'
+    'CodeQL (code scanning)',
+    'Hallucinated-dependency / slopsquatting check',
+    'UI E2E (Playwright)'
   ),
   [switch]   $WithMergeQueue,
   [switch]   $Force,
@@ -100,6 +101,17 @@ if ($Remove) {
   }
   Step "Done (removed)"
   return
+}
+
+# -- 0. Dependency graph (the required 'Dependency review' check needs it) -------
+# A freshly-created repo has the dependency graph OFF, so the required
+# 'Dependency review (supply-chain)' check errors ("not supported on this repository")
+# and blocks EVERY PR. Enabling vulnerability-alerts turns the dependency graph on.
+Step "0. Dependency graph (Dependency review requires it; a fresh repo has it OFF)"
+if ($DryRun) { Info "[dry-run] PUT repos/$Repo/vulnerability-alerts (enables dependency graph)" }
+else {
+  gh api -X PUT "repos/$Repo/vulnerability-alerts" 2>$null
+  Info "vulnerability-alerts + dependency graph enabled - the required 'Dependency review (supply-chain)' check can now run."
 }
 
 # -- 1. Environments ------------------------------------------------------------
