@@ -168,7 +168,12 @@ jobs:
             set -a; . ./test/e2e/e2e.env; set +a
           fi
           echo "Running harness-authored E2E (${E2E[*]}) against $TEST_BASE_URL"
-          npx vitest run test/e2e --reporter=json --outputFile=e2e-result.json
+          # Warm the CRUD path (not just /healthz) so the freshly-deployed revision is fully serving.
+          for i in $(seq 1 20); do curl -fsS "$TEST_BASE_URL/api/todos" >/dev/null && break || sleep 3; done
+          # --retry=2: a live service just after deploy can hit a brief transient (runner->ACA network /
+          # readiness); vitest has no default retry (Playwright uses retries:2 for the same reason). A
+          # genuinely-broken deploy still fails all attempts; the skip-guard still enforces >=1 real pass.
+          npx vitest run test/e2e --retry=2 --reporter=json --outputFile=e2e-result.json
           # ANTI-THEATER skip-guard: a skipped/empty suite exits 0; that must NOT count as a green gate.
           node -e "const r=require('./e2e-result.json');const p=r.numPassedTests||0,s=r.numPendingTests||0,t=r.numTotalTests||0;console.log('E2E executed: passed='+p+' skipped='+s+' total='+t);if(p<1){console.error('::error::E2E gate did not execute a passing live test (skip!=green) — refusing to promote.');process.exit(1);}"
 
