@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Agentic SDLC — World Cup Commentator</title>
+<title>Agentic SDLC — Governed Application Delivery</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg'/%3E" />
 <script>
   (() => {
@@ -404,9 +404,9 @@ h3 {
 .dot.harness { background: var(--cp-accent); }
 .dot.usecase { background: var(--cp-border-strong); }
 
-/* evidence metrics strip (merged validation proof) */
+/* qualitative evidence strip */
 .evidence { display: flex; flex-wrap: wrap; gap: .6rem; }
-.evidence .stat {
+.evidence .proof {
   flex: 1 1 0;
   min-width: 8rem;
   border: 1px solid var(--cp-border);
@@ -414,15 +414,14 @@ h3 {
   background: var(--cp-surface-soft);
   padding: .6rem .85rem;
 }
-.evidence .stat b {
+.evidence .proof b {
   display: block;
   color: var(--cp-accent);
-  font-size: clamp(1.5rem, 2.5vw, 2.1rem);
+  font-size: clamp(1.15rem, 1.8vw, 1.55rem);
   font-weight: 900;
-  line-height: 1;
-  letter-spacing: -.04em;
+  line-height: 1.1;
 }
-.evidence .stat span { color: var(--cp-text-muted); font-size: .82rem; }
+.evidence .proof span { color: var(--cp-text-muted); font-size: .82rem; }
 
 /* community-framework strip: one labelled group per category */
 .fw-title { margin-bottom: .55rem; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; font-size: .74rem; }
@@ -548,7 +547,7 @@ body.show-overview .overview { display: block; }
       <p class="lead">From a workplace request to governed, agent-built, deployed software. The demo is the example; the harness is the reusable product.</p>
       <p class="small" style="margin-top:1.6rem;">Özgür Karahan · July 2026</p>
     </div>
-    <aside class="notes"><strong>Opening.</strong> Keep it minimal. The World Cup agent is the vehicle; the lifecycle and harness are the reusable pattern. Numbers if asked: 1 Work IQ intake, 1 validated harness, 21 live E2E passed.</aside>
+    <aside class="notes"><strong>Opening.</strong> Keep it minimal. The demonstrated application is the vehicle; the lifecycle and harness are the reusable pattern.</aside>
     <div class="footer"><span>Agentic SDLC</span><span>Use arrows · N notes · O overview</span></div>
   </section>
 
@@ -739,39 +738,39 @@ body.show-overview .overview { display: block; }
   <section class="slide divider" data-section="part 2 of 2" data-title="Part 2 — Demo">
     <div class="part-index">Part 2 of 2</div>
     <div class="kicker">The demo</div>
-    <h2>Now, one example use case.</h2>
-    <p class="lead">Everything that follows is a single example built to exercise the harness end to end. The reusable foundation stays the same; only the use-case-specific choices change.</p>
+    <h2>Now, one application delivery example.</h2>
+    <p class="lead">Everything that follows is one concrete run built to exercise the harness end to end. The reusable foundation stays the same; only the application-specific choices change.</p>
     <aside class="notes"><strong>Section break.</strong> Make the pivot explicit: we are leaving the reusable foundation and entering a concrete demonstration.</aside>
-    <div class="footer"><span>Part 2 · Demo</span><span>one example use case</span></div>
+    <div class="footer"><span>Part 2 · Demo</span><span>one application delivery example</span></div>
   </section>
 
-  <section class="slide" data-section="use case" data-title="Use case" data-part="Part 2 · Demo">
+  <section class="slide" data-section="application project" data-title="Application project" data-part="Part 2 · Demo">
     <div class="persona-badge proj">Project team</div>
     <div class="layout two-wide">
       <div>
-        <div class="kicker">Here is how I used it: an example</div>
-        <h2>World Cup Commentator</h2>
-        <p class="lead">A small Microsoft Foundry prompt agent (a declarative, served agent) used to prove the harness end-to-end: intake, planning, PR execution, grounding, guardrails, evals, and live validation.</p>
+        <div class="kicker">Application development · one concrete proof</div>
+        <h2>One governed cycle for any application.</h2>
+        <p class="lead">One concrete run used a small Foundry prompt agent, but the same lifecycle applies to any repository: product features, APIs, data, infrastructure, or agent capabilities.</p>
         <div class="pill-row">
-          <span class="pill primary">prompt agent</span>
-          <span class="pill">existing model deployment</span>
-          <span class="pill">Web IQ grounding only</span>
-          <span class="pill">approval required</span>
+          <span class="pill primary">existing repository</span>
+          <span class="pill">any language or stack</span>
+          <span class="pill">any deployment target</span>
+          <span class="pill">approval gates</span>
         </div>
       </div>
       <div class="card strong">
-        <h3>What the example proves</h3>
+        <h3>What the pattern supports</h3>
         <ul>
-          <li>Work IQ can act as the governed workplace-intake layer for Teams context.</li>
-          <li>A Teams request can become structured lifecycle work.</li>
-          <li>The harness can add a governed tool connection without widening scope.</li>
-          <li>Runtime evidence can become scoped follow-up work.</li>
-          <li>Guardrails stay testable as the agent gains grounding.</li>
+          <li>Raw intent becomes structured, prioritized application work.</li>
+          <li>Each scoped unit lands as one reviewable PR behind required checks.</li>
+          <li>APIs and MCP tools can be added without widening scope.</li>
+          <li>Deployment evidence becomes scoped follow-up work.</li>
+          <li>Guardrails and tests evolve with the application.</li>
         </ul>
       </div>
     </div>
-    <aside class="notes"><strong>Use case.</strong> It is small enough to understand, but rich enough to show grounding, safety, and lifecycle governance.</aside>
-    <div class="footer"><span>World Cup Commentator</span><span>use case</span></div>
+    <aside class="notes"><strong>Application project.</strong> The proof run used a Foundry prompt agent because it exercises integration, grounding, and live validation. The pattern is not agent-only; it applies to any application change in any repository.</aside>
+    <div class="footer"><span>Any application · one governed cycle</span><span>application project</span></div>
   </section>
 
   <section class="slide" data-section="operating cycle" data-title="Demo operating cycle" data-part="Part 2 · Demo">
@@ -843,21 +842,21 @@ body.show-overview .overview { display: block; }
   <section class="slide" data-section="demo · execution to evidence" data-title="Execution to evidence" data-part="Part 2 · Demo">
     <div class="persona-badge proj">Project team + Validator</div>
     <div class="kicker">Demo walkthrough · 2 of 2</div>
-    <h2>From scoped PRs to live, grounded evidence.</h2>
+    <h2>From scoped PRs to governed application evidence.</h2>
     <div class="timeline">
       <div class="step card"><span class="count">1</span><h3>Implement</h3><p>The Copilot cloud agent landed scoped PRs, one per unit of work.</p></div>
       <div class="step card"><span class="count">2</span><h3>Gate</h3><p>Required checks (tests, lint, security) had to pass before merge.</p></div>
       <div class="step card"><span class="count">3</span><h3>Review</h3><p>An engineer reviewed and approved each PR.</p></div>
-      <div class="step card"><span class="count">4</span><h3>Register</h3><p>The Foundry prompt agent became the working served deployment.</p></div>
-      <div class="step card"><span class="count">5</span><h3>Validate</h3><p>Live E2E refined the harness until grounded behavior passed.</p></div>
+      <div class="step card"><span class="count">4</span><h3>Deploy</h3><p>The approved application change reached its target environment.</p></div>
+      <div class="step card"><span class="count">5</span><h3>Validate</h3><p>Live validation confirmed behavior and created follow-up work where needed.</p></div>
     </div>
     <div class="evidence">
-      <div class="stat"><b>52</b><span>local tests · all green</span></div>
-      <div class="stat"><b>21</b><span>live E2E behaviours · all green</span></div>
-      <div class="stat"><b>4</b><span>runtime findings, shipped as scoped fix PRs</span></div>
-      <div class="stat"><b>1</b><span>PR per work unit · no unit exceeded its scope</span></div>
+      <div class="proof"><b>Traceable</b><span>Intent, issue, work unit, PR, and release stay linked.</span></div>
+      <div class="proof"><b>Enforced</b><span>Tests, quality, and security checks gate every merge.</span></div>
+      <div class="proof"><b>Approved</b><span>Humans decide at plan, PR, and deployment gates.</span></div>
+      <div class="proof"><b>Observable</b><span>Runtime evidence feeds scoped follow-up work.</span></div>
     </div>
-    <aside class="notes"><strong>Demo, part 2.</strong> The run did not stop when a cloud PR opened. It followed merge, live validation, and follow-up harness fixes to completion. These numbers are the proof.</aside>
+    <aside class="notes"><strong>Demo, part 2.</strong> The lifecycle does not stop when a cloud PR opens. It follows merge, deployment, live validation, and scoped follow-up work. The proof is the evidence chain, not a fixed scorecard.</aside>
     <div class="footer"><span>Execution to evidence</span><span>demo walkthrough</span></div>
   </section>
 
@@ -866,7 +865,7 @@ body.show-overview .overview { display: block; }
       <div>
         <div class="kicker">Takeaway</div>
         <h2>Start small, build the operating system.</h2>
-        <p class="lead">The World Cup agent is small by design. The reusable pattern is workplace intake, validated planning, GitHub-native governance, evals, live evidence, and controlled runtime registration.</p>
+        <p class="lead">The demonstrated application is deliberately small. The reusable pattern is workplace intake, validated planning, GitHub-native governance, evals, live evidence, and controlled runtime registration.</p>
       </div>
       <div class="stack">
         <div class="card strong"><h3>Keep</h3><p>Work IQ intake, enforce-first governance, issue-driven work, agent progress observable from PR status, evals, and human gates.</p></div>
